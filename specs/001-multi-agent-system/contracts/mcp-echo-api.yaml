@@ -1,0 +1,119 @@
+openapi: 3.0.0
+info:
+  title: MCP Echo Server API
+  version: 1.0.0
+  description: Model Context Protocol server for echo functionality
+
+servers:
+  - url: http://localhost:8083
+    description: Local MCP echo server
+
+paths:
+  /rpc:
+    post:
+      summary: MCP RPC endpoint for echo queries
+      operationId: echoRPC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EchoRequest'
+            examples:
+              echo:
+                value:
+                  jsonrpc: "2.0"
+                  method: "echo"
+                  params:
+                    text: "hello world"
+                  id: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+              examples:
+                success:
+                  value:
+                    jsonrpc: "2.0"
+                    result:
+                      original_text: "hello world"
+                      echo_text: "hello world"
+                    id: 1
+                error:
+                  value:
+                    jsonrpc: "2.0"
+                    error:
+                      code: -32602
+                      message: "Text cannot be empty"
+                    id: 1
+
+components:
+  schemas:
+    EchoRequest:
+      type: object
+      required:
+        - jsonrpc
+        - method
+        - params
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        method:
+          type: string
+          enum: ["echo"]
+        params:
+          type: object
+          required:
+            - text
+          properties:
+            text:
+              type: string
+              description: Text to echo back
+              minLength: 1
+              maxLength: 1000
+        id:
+          type: integer
+          description: Request ID
+
+    EchoResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        result:
+          type: object
+          properties:
+            original_text:
+              type: string
+              description: Original text that was requested to echo
+              maxLength: 1000
+            echo_text:
+              type: string
+              description: Echoed text (should match original)
+              maxLength: 1000
+        error:
+          $ref: '#/components/schemas/MCPError'
+        id:
+          type: integer
+
+    MCPError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message

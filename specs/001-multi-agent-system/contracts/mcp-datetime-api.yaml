@@ -1,0 +1,124 @@
+openapi: 3.0.0
+info:
+  title: MCP DateTime Server API
+  version: 1.0.0
+  description: Model Context Protocol server for datetime information
+
+servers:
+  - url: http://localhost:8082
+    description: Local MCP datetime server
+
+paths:
+  /rpc:
+    post:
+      summary: MCP RPC endpoint for datetime queries
+      operationId: datetimeRPC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DateTimeRequest'
+            examples:
+              getDateTime:
+                value:
+                  jsonrpc: "2.0"
+                  method: "getDateTime"
+                  params:
+                    city: "New York City"
+                  id: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DateTimeResponse'
+              examples:
+                success:
+                  value:
+                    jsonrpc: "2.0"
+                    result:
+                      datetime: "2025-09-23T14:30:00-05:00"
+                      timezone: "America/New_York"
+                      utc_offset: "-05:00"
+                    id: 1
+                error:
+                  value:
+                    jsonrpc: "2.0"
+                    error:
+                      code: -32602
+                      message: "City not found"
+                    id: 1
+
+components:
+  schemas:
+    DateTimeRequest:
+      type: object
+      required:
+        - jsonrpc
+        - method
+        - params
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        method:
+          type: string
+          enum: ["getDateTime"]
+        params:
+          type: object
+          required:
+            - city
+          properties:
+            city:
+              type: string
+              description: US city name
+              minLength: 1
+              maxLength: 100
+        id:
+          type: integer
+          description: Request ID
+
+    DateTimeResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        result:
+          type: object
+          properties:
+            datetime:
+              type: string
+              format: date-time
+              description: ISO 8601 formatted local datetime
+            timezone:
+              type: string
+              description: IANA timezone identifier
+              pattern: '^[A-Za-z]+/[A-Za-z_]+$'
+            utc_offset:
+              type: string
+              description: UTC offset in format ±HH:MM
+              pattern: '^[+-]\d{2}:\d{2}$'
+        error:
+          $ref: '#/components/schemas/MCPError'
+        id:
+          type: integer
+
+    MCPError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message

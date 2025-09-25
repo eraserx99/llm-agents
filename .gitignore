@@ -1,0 +1,132 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Binary output directory
+bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories (remove the comment below if you use dep)
+# vendor/
+
+# Go module download cache
+go/pkg/mod/
+
+# Go build cache
+go-build/
+
+# Environment variables file
+.env
+.env.local
+.env.*.local
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# MCP server log files
+weather-mcp.log
+datetime-mcp.log
+echo-mcp.log
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Debug files
+debug
+__debug_bin
+
+# Coverage reports
+coverage.txt
+coverage.html
+*.cov
+
+# Profiling data
+*.prof
+*.pprof
+
+# Generated files
+*.generated.go
+
+# Local configuration overrides
+config.local.yaml
+config.local.json
+
+# API keys and secrets (if stored locally for development)
+*.key
+*.pem
+secrets/
+
+# MacOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux specific
+.directory
+.Trash-*
+
+# Backup files
+*.bak
+*.backup
+backup/
+
+# Build artifacts
+dist/
+build/
+
+# Documentation build
+docs/_build/
+docs/_site/
+
+# Python virtual environment (if using Python scripts)
+venv/
+.venv/
+
+# Node modules (if using any JS tools)
+node_modules/
+
+# Terraform files (if using for deployment)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Docker files (if containerizing)
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes (if deploying to k8s)
+*.kubeconfig
+kubeconfig
+
+# Personal notes
+notes.txt
+TODO.txt
+NOTES.md

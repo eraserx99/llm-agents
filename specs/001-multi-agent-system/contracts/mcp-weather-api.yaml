@@ -1,0 +1,126 @@
+openapi: 3.0.0
+info:
+  title: MCP Weather Server API
+  version: 1.0.0
+  description: Model Context Protocol server for weather/temperature data
+
+servers:
+  - url: http://localhost:8081
+    description: Local MCP weather server
+
+paths:
+  /rpc:
+    post:
+      summary: MCP RPC endpoint for weather queries
+      operationId: weatherRPC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeatherRequest'
+            examples:
+              getTemperature:
+                value:
+                  jsonrpc: "2.0"
+                  method: "getTemperature"
+                  params:
+                    city: "New York City"
+                  id: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+              examples:
+                success:
+                  value:
+                    jsonrpc: "2.0"
+                    result:
+                      temperature: 72.5
+                      unit: "F"
+                      description: "Partly cloudy"
+                    id: 1
+                error:
+                  value:
+                    jsonrpc: "2.0"
+                    error:
+                      code: -32602
+                      message: "City not found"
+                    id: 1
+
+components:
+  schemas:
+    WeatherRequest:
+      type: object
+      required:
+        - jsonrpc
+        - method
+        - params
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        method:
+          type: string
+          enum: ["getTemperature"]
+        params:
+          type: object
+          required:
+            - city
+          properties:
+            city:
+              type: string
+              description: US city name
+              minLength: 1
+              maxLength: 100
+        id:
+          type: integer
+          description: Request ID
+
+    WeatherResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        result:
+          type: object
+          properties:
+            temperature:
+              type: number
+              format: float
+              minimum: -100
+              maximum: 150
+              description: Temperature in Fahrenheit
+            unit:
+              type: string
+              enum: ["F", "C"]
+              default: "F"
+            description:
+              type: string
+              description: Weather description
+              maxLength: 200
+        error:
+          $ref: '#/components/schemas/MCPError'
+        id:
+          type: integer
+
+    MCPError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message
