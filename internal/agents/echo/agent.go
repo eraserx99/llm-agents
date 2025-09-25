@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/steve/llm-agents/internal/config"
 	"github.com/steve/llm-agents/internal/mcp/client"
 	"github.com/steve/llm-agents/internal/models"
 	"github.com/steve/llm-agents/internal/utils"
@@ -20,6 +21,13 @@ type Agent struct {
 func NewAgent(echoServerURL string, timeout time.Duration) *Agent {
 	return &Agent{
 		mcpClient: client.NewClient(echoServerURL, timeout),
+	}
+}
+
+// NewTLSAgent creates a new echo agent with TLS support
+func NewTLSAgent(echoServerURL string, timeout time.Duration, tlsConfig *config.TLSConfig) *Agent {
+	return &Agent{
+		mcpClient: client.NewTLSClient(echoServerURL, timeout, tlsConfig),
 	}
 }
 
