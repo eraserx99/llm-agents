@@ -1,6 +1,6 @@
 # Tasks: mTLS Enhancement for MCP Servers
 
-**Input**: Design documents from `/specs/002-can-you-enhance/`
+**Input**: Design documents from `/specs/002-comprehensive-mTLS-authentication/`
 **Prerequisites**: plan.md (required), research.md, data-model.md, contracts/
 
 ## Execution Flow (main)
@@ -218,7 +218,7 @@ Task: "Update echo MCP server with TLS support in cmd/echo-mcp/main.go"
 
 **Status**: ✅ **COMPLETED**
 **Completion Date**: 2025-10-02
-**Branch**: `002-can-you-enhance`
+**Branch**: `002-comprehensive-mTLS-authentication`
 **Commit**: `dcec8c0` - Enhance mTLS implementation with client utilities and comprehensive testing
 
 ### Summary

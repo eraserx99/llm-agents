@@ -1,8 +1,8 @@
 
 # Implementation Plan: mTLS Enhancement for MCP Servers
 
-**Branch**: `002-can-you-enhance` | **Date**: 2025-09-25 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/002-can-you-enhance/spec.md`
+**Branch**: `002-comprehensive-mTLS-authentication` | **Date**: 2025-09-25 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-comprehensive-mTLS-authentication/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```

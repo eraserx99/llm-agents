@@ -1,6 +1,6 @@
 # Feature Specification: mTLS Enhancement for MCP Servers
 
-**Feature Branch**: `002-can-you-enhance`
+**Feature Branch**: `002-comprehensive-mTLS-authentication`
 **Created**: 2025-09-25
 **Status**: Draft
 **Input**: User description: "Can you enhance all 3 MCP servers here with mTLS? self-signed is fine as long as both client and server sides can relax the checking of the certificates for the demo purpose now."
@@ -8,28 +8,28 @@
 ## Execution Flow (main)
 ```
 1. Parse user description from Input
-   ’ User wants mTLS (mutual TLS) authentication for all 3 MCP servers
+   ï¿½ User wants mTLS (mutual TLS) authentication for all 3 MCP servers
 2. Extract key concepts from description
-   ’ Actors: MCP servers (weather, datetime, echo), MCP clients
-   ’ Actions: establish secure communication channels with client certificate validation
-   ’ Data: certificate generation, validation, secure transmission of MCP requests/responses
-   ’ Constraints: self-signed certificates acceptable, certificate validation can be relaxed for demo
+   ï¿½ Actors: MCP servers (weather, datetime, echo), MCP clients
+   ï¿½ Actions: establish secure communication channels with client certificate validation
+   ï¿½ Data: certificate generation, validation, secure transmission of MCP requests/responses
+   ï¿½ Constraints: self-signed certificates acceptable, certificate validation can be relaxed for demo
 3. For each unclear aspect:
-   ’ No major clarifications needed - requirement is clear
+   ï¿½ No major clarifications needed - requirement is clear
 4. Fill User Scenarios & Testing section
-   ’ Clear user flow: secure communication between agents and MCP servers
+   ï¿½ Clear user flow: secure communication between agents and MCP servers
 5. Generate Functional Requirements
-   ’ Each requirement must be testable
+   ï¿½ Each requirement must be testable
 6. Identify Key Entities (if data involved)
-   ’ Certificates, TLS configuration, client/server authentication
+   ï¿½ Certificates, TLS configuration, client/server authentication
 7. Run Review Checklist
-   ’ Spec is clear and implementable
+   ï¿½ Spec is clear and implementable
 8. Return: SUCCESS (spec ready for planning)
 ```
 
 ---
 
-## ¡ Quick Guidelines
+## ï¿½ Quick Guidelines
 -  Focus on WHAT users need and WHY
 - L Avoid HOW to implement (no tech stack, APIs, code structure)
 - =e Written for business stakeholders, not developers

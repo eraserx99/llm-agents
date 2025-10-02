@@ -1,0 +1,107 @@
+{
+    // Go extension settings
+    "go.useLanguageServer": true,
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "workspace",
+    "go.formatTool": "gofmt",
+    "go.formatOnSave": true,
+    "go.vetOnSave": "workspace",
+    "go.buildOnSave": "off",
+    "go.testOnSave": false,
+
+    // Go test settings
+    "go.testFlags": ["-v", "-race"],
+    "go.coverOnSave": false,
+    "go.coverOnSingleTest": false,
+    "go.coverOnTestPackage": false,
+
+    // Go build tags and environment
+    "go.buildTags": "",
+    "go.toolsEnvVars": {},
+    "go.testEnvVars": {},
+
+    // Delve debugger settings
+    "go.delveConfig": {
+        "dlvLoadConfig": {
+            "followPointers": true,
+            "maxVariableRecurse": 1,
+            "maxStringLen": 120,
+            "maxArrayValues": 64,
+            "maxStructFields": -1
+        },
+        "apiVersion": 2,
+        "showGlobalVariables": false
+    },
+
+    // Editor settings for Go
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "golang.go"
+    },
+    "[go.mod]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+
+    // File associations
+    "files.associations": {
+        "*.go": "go",
+        "go.mod": "go.mod",
+        "go.sum": "go.sum"
+    },
+
+    // File exclusions
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/bin": false,
+        "**/*.log": false
+    },
+
+    // Search exclusions
+    "search.exclude": {
+        "**/bin": true,
+        "**/*.log": true,
+        "**/vendor": true
+    },
+
+    // Terminal settings - Set your API key here
+    "terminal.integrated.env.osx": {
+        "OPENROUTER_API_KEY": "your-api-key-here"
+    },
+    "terminal.integrated.env.linux": {
+        "OPENROUTER_API_KEY": "your-api-key-here"
+    },
+    "terminal.integrated.env.windows": {
+        "OPENROUTER_API_KEY": "your-api-key-here"
+    },
+
+    // Project-specific settings
+    "go.gopath": "",
+    "go.goroot": "",
+    "go.inferGopath": true,
+
+    // Code lens
+    "go.enableCodeLens": {
+        "references": true,
+        "runtest": true
+    },
+
+    // Inlay hints
+    "go.inlayHints.assignVariableTypes": false,
+    "go.inlayHints.compositeLiteralFields": false,
+    "go.inlayHints.compositeLiteralTypes": false,
+    "go.inlayHints.constantValues": false,
+    "go.inlayHints.functionTypeParameters": false,
+    "go.inlayHints.parameterNames": false,
+    "go.inlayHints.rangeVariableTypes": false
+}

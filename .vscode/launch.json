@@ -1,0 +1,142 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Main (Coordinator Agent)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/main",
+            "args": [
+                "-city", "New York",
+                "-query", "What's the temperature?",
+                "-verbose"
+            ],
+            "env": {
+                "OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Launch Weather MCP Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/weather-mcp",
+            "env": {}
+        },
+        {
+            "name": "Launch Weather MCP Server (TLS)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/weather-mcp",
+            "args": ["--tls"],
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
+        },
+        {
+            "name": "Launch DateTime MCP Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/datetime-mcp",
+            "env": {}
+        },
+        {
+            "name": "Launch DateTime MCP Server (TLS)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/datetime-mcp",
+            "args": ["--tls"],
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
+        },
+        {
+            "name": "Launch Echo MCP Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/echo-mcp",
+            "env": {}
+        },
+        {
+            "name": "Launch Echo MCP Server (TLS)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/echo-mcp",
+            "args": ["--tls"],
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
+        },
+        {
+            "name": "Launch Certificate Generator",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/cert-gen",
+            "env": {}
+        },
+        {
+            "name": "Launch Main (Combined Query)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/main",
+            "args": [
+                "-city", "Chicago",
+                "-query", "What's the weather and time?",
+                "-verbose"
+            ],
+            "env": {
+                "OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Launch Main (Echo Query)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/main",
+            "args": [
+                "-query", "echo hello world"
+            ],
+            "env": {
+                "OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "All MCP Servers (HTTP)",
+            "configurations": [
+                "Launch Weather MCP Server",
+                "Launch DateTime MCP Server",
+                "Launch Echo MCP Server"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "All MCP Servers (TLS)",
+            "configurations": [
+                "Launch Weather MCP Server (TLS)",
+                "Launch DateTime MCP Server (TLS)",
+                "Launch Echo MCP Server (TLS)"
+            ],
+            "stopAll": true
+        }
+    ]
+}

@@ -209,7 +209,7 @@ Stable IDs (e.g., **BP-1**, **ERR-2**) enable precise code‑review comments, ch
 
 ## Current Development Context
 
-### Active Feature: mTLS Enhancement for MCP Servers (002-can-you-enhance)
+### Active Feature: Comprehensive mTLS Authentication (002-comprehensive-mTLS-authentication)
 
 **Language/Framework**: Go 1.25.1 with Go standard library (net/http, crypto/tls, crypto/x509)
 **Architecture**: Single backend service architecture with multiple MCP servers
@@ -223,6 +223,6 @@ Stable IDs (e.g., **BP-1**, **ERR-2**) enable precise code‑review comments, ch
 - Configurable validation modes (strict/demo)
 
 **Recent Changes** (Last 3 features):
-1. **002-can-you-enhance**: mTLS Enhancement - Adding mutual TLS authentication to secure MCP server communication
+1. **002-comprehensive-mTLS-authentication**: Comprehensive mTLS Authentication - Adding mutual TLS authentication to secure MCP server communication
 2. **Initial codebase**: Basic MCP servers with HTTP-only communication
 3. **Setup**: Project structure with coordinator agent pattern
