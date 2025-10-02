@@ -188,10 +188,6 @@ go build -o bin/weather-mcp ./cmd/weather-mcp
 go build -o bin/datetime-mcp ./cmd/datetime-mcp
 go build -o bin/echo-mcp ./cmd/echo-mcp
 go build -o bin/cert-gen ./cmd/cert-gen          # Certificate generator (for TLS)
-
-# MCP Streaming Protocol (Official SDK) builds:
-go build -o bin/weather-mcp-sdk ./cmd/weather-mcp-sdk    # Official SDK server with HTTP/SSE
-go build -o bin/test-mcp-client ./cmd/test-mcp-client    # Official SDK client
 ```
 
 ### Setup
@@ -241,50 +237,23 @@ All servers now use the official MCP Go SDK with StreamableHTTPHandler throughou
 
 #### Demo: Direct MCP SDK Testing
 
-**Test the streaming protocol directly with the test client:**
+**Verify the servers are running properly:**
 
-1. **Start Test MCP Server** (Terminal 1):
 ```bash
-# HTTP Mode (port 8091)
-./bin/weather-mcp-sdk -verbose
+# Check server status
+curl http://localhost:8081/health  # Weather MCP
+curl http://localhost:8082/health  # DateTime MCP
+curl http://localhost:8083/health  # Echo MCP
 
-# OR mTLS Mode (port 8491)
-export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
-./bin/weather-mcp-sdk -tls -verbose
 ```
 
-2. **Test with MCP Client** (Terminal 2):
-```bash
-# HTTP Mode Test
-./bin/test-mcp-client -verbose -city "New York"
-
-# mTLS Mode Test
-export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
-./bin/test-mcp-client -tls -verbose -city "Tokyo"
-```
-
-**Expected Output:**
-```
-[INFO] MCP HTTP/SSE client transport created with mTLS
-[INFO] Connecting to MCP server with HTTP/SSE streaming transport...
-[INFO] Connected to MCP server successfully!
-[INFO] Listing available tools...
-[INFO] Available tools:
-[INFO]   - getTemperature: Get current temperature and weather conditions for a city
-[INFO] Calling getTemperature tool for city: Tokyo
-[INFO] Tool call successful!
-
-=== MCP Tool Call Results ===
-Tool: getTemperature
-City: Tokyo
-Response:
-  Weather in Tokyo: 37.3°C, Light rain
-
-=== MCP Streaming Test Complete ===
-✅ Successfully connected using MCP HTTP/SSE streaming transport
-✅ Tool listing worked
-✅ Tool execution worked
-✅ mTLS authentication successful
+**Expected Response:**
+```json
+{
+  "status": "ok",
+  "server": "weather-mcp",
+  "version": "v1.0.0"
+}
 ```
 
 ## 🔐 TLS/mTLS Security (Optional)
@@ -513,18 +482,20 @@ The system supports 100+ US cities with proper timezone handling:
 ### Project Structure
 ```
 ├── cmd/
-│   ├── main/                # CLI application
-│   ├── weather-mcp/         # Weather MCP server (legacy JSON-RPC)
-│   ├── datetime-mcp/        # DateTime MCP server (legacy JSON-RPC)
-│   ├── echo-mcp/            # Echo MCP server (legacy JSON-RPC)
-│   ├── weather-mcp-sdk/     # Official MCP SDK server with HTTP/SSE
-│   ├── test-mcp-client/     # Official MCP SDK client
+│   ├── main/                # CLI application (coordinator agent)
+│   ├── weather-mcp/         # Weather MCP server with mTLS
+│   ├── datetime-mcp/        # DateTime MCP server with mTLS
+│   ├── echo-mcp/            # Echo MCP server with mTLS
 │   └── cert-gen/            # Certificate generator for TLS
 ├── internal/
 │   ├── agents/              # Agent implementations
+│   │   ├── coordinator/     # Main coordinator agent
+│   │   ├── temperature/     # Weather sub-agent
+│   │   ├── datetime/        # DateTime sub-agent
+│   │   ├── echo/            # Echo sub-agent
+│   │   └── client/          # Unified MCP client
 │   ├── mcp/                 # MCP server framework
-│   │   └── transport/       # HTTP/SSE transport for official SDK
-│   │       └── http_sse.go  # Custom transport implementation
+│   │   └── transport/       # HTTP/SSE transport layer
 │   ├── config/              # Configuration (including TLS)
 │   ├── tls/                 # TLS certificate management
 │   └── utils/               # Utilities
@@ -538,10 +509,9 @@ The system supports 100+ US cities with proper timezone handling:
 
 ### Key Files
 
-**MCP Streaming Protocol Implementation:**
-- `internal/mcp/transport/http_sse.go` - Custom HTTP/SSE transport for official MCP SDK
-- `cmd/weather-mcp-sdk/main.go` - Official SDK server with type-safe tool registration
-- `cmd/test-mcp-client/main.go` - Official SDK client with streaming support
+**MCP Client & Transport:**
+- `internal/mcp/transport/http_sse.go` - HTTP/SSE transport for MCP protocol
+- `internal/agents/client/mcp_client.go` - Unified MCP client for all agents
 - `go.mod` - Includes `github.com/modelcontextprotocol/go-sdk v0.7.0`
 
 ### Testing
@@ -620,39 +590,6 @@ All traditional MCP servers implement JSON-RPC 2.0 protocol:
 }
 ```
 
-#### MCP Streaming Protocol (Official SDK)
-
-**MCP SDK Server (port 8091/8491)** - HTTP/SSE transport:
-
-**Tool Discovery**: `POST /mcp`
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/list",
-  "id": 1
-}
-```
-
-**Tool Execution**: `POST /mcp`
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "getTemperature",
-    "arguments": {"city": "Tokyo"}
-  },
-  "id": 2
-}
-```
-
-**SSE Stream**: `GET /sse`
-```
-data: {"jsonrpc":"2.0","result":{"tools":[...]},"id":1}
-
-data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Weather in Tokyo: 37.3°C, Light rain"}]},"id":2}
-```
-
 ## ⚙️ How It Works
 
 1. **User Query**: CLI accepts natural language query
@@ -675,22 +612,14 @@ The system gracefully handles:
 
 **MCP servers not starting?**
 - Check if ports 8081-8083 (HTTP) or 8443-8445 (HTTPS) are available
-- For MCP SDK: Check ports 8091 (HTTP) or 8491 (HTTPS)
 - Look for error messages in server output
 - For TLS mode, ensure certificates exist: `ls -la certs/`
 
-**MCP Streaming Protocol issues?**
-- Verify official SDK server is running: `./bin/weather-mcp-sdk -verbose`
-- Test HTTP endpoints directly:
-  ```bash
-  # Test SSE endpoint
-  curl -N http://localhost:8091/sse
-  
-  # Test MCP endpoint
-  curl -X POST http://localhost:8091/mcp \
-    -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
-  ```
+**Connection issues?**
+- Verify MCP servers are running: `curl http://localhost:8081/health`
+- Check server logs for errors
+- Ensure coordinator agent can reach all three MCP servers
+- For TLS mode, verify certificates are valid and accessible
 - For mTLS: Ensure client and server use same certificates
 - Check for SSE message parsing errors in client logs
 
