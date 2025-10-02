@@ -48,14 +48,12 @@ func NewMCPClient(serverURL string, timeout time.Duration) (*MCPClient, error) {
 // NewTLSMCPClient creates a new MCP client with TLS support using official SDK
 func NewTLSMCPClient(serverURL string, timeout time.Duration, tlsConfig *config.TLSConfig) (*MCPClient, error) {
 	if tlsConfig == nil {
-		utils.Error("TLS configuration is required for TLS client")
-		return NewMCPClient(serverURL, timeout)
+		return nil, fmt.Errorf("TLS configuration is required for TLS client")
 	}
 
 	// Validate TLS configuration
 	if err := tlsConfig.Validate(); err != nil {
-		utils.Error("Invalid TLS configuration: %v", err)
-		return NewMCPClient(serverURL, timeout)
+		return nil, fmt.Errorf("invalid TLS configuration: %w", err)
 	}
 
 	// Create MCP client using official SDK
@@ -143,14 +141,18 @@ func (c *MCPClient) CallWeather(ctx context.Context, city string) (*models.Tempe
 		return nil, fmt.Errorf("no text content in weather response")
 	}
 
-	// For this implementation, we'll simulate parsing the response
-	// In a real implementation, the server would return structured data
-	// or we'd parse the text response more carefully
+	// Parse the response text: "Weather in {city}: {temp}°C, {description}"
+	// Example: "Weather in Boston: 23.5°C, Sunny"
+	temperature, description, err := parseWeatherResponse(textContent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse weather response: %w", err)
+	}
+
 	return &models.TemperatureData{
 		City:        city,
-		Temperature: 22.5, // Would parse from textContent in real implementation
+		Temperature: temperature,
 		Unit:        "°C",
-		Description: "Weather data from MCP streaming protocol",
+		Description: description,
 		Timestamp:   time.Now(),
 		Source:      "weather-mcp-streaming",
 	}, nil
@@ -197,14 +199,26 @@ func (c *MCPClient) CallDateTime(ctx context.Context, city string) (*models.Date
 		return nil, fmt.Errorf("no text content in datetime response")
 	}
 
-	// For this implementation, simulate datetime response
-	now := time.Now()
+	// Parse the response text
+	localTimeStr, timezone, utcOffset, err := parseDateTimeResponse(textContent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse datetime response: %w", err)
+	}
+
+	// Parse the local time string
+	localTime, err := time.Parse("2006-01-02 15:04:05", localTimeStr)
+	if err != nil {
+		// If parsing fails, use current time
+		localTime = time.Now()
+		utils.Warn("Failed to parse datetime '%s', using current time: %v", localTimeStr, err)
+	}
+
 	return &models.DateTimeData{
 		City:      city,
-		DateTime:  now,
-		Timezone:  "America/New_York", // Would parse from textContent in real implementation
-		UTCOffset: "-05:00",
-		Timestamp: now,
+		DateTime:  localTime,
+		Timezone:  timezone,
+		UTCOffset: utcOffset,
+		Timestamp: time.Now(),
 	}, nil
 }
 
@@ -305,4 +319,118 @@ func (c *MCPClient) ListTools(ctx context.Context) ([]*mcp.Tool, error) {
 	}
 
 	return toolsResult.Tools, nil
+}
+
+// parseWeatherResponse parses weather text response
+// Expected format: "Weather in {city}: {temp}°C, {description}"
+func parseWeatherResponse(text string) (float64, string, error) {
+	// Find the temperature value
+	// Look for pattern: {number}°C
+	tempStart := -1
+	tempEnd := -1
+
+	for i := 0; i < len(text)-2; i++ {
+		if text[i:i+2] == "°C" {
+			tempEnd = i
+			// Find start of number (walk backwards)
+			j := i - 1
+			for j >= 0 && (text[j] >= '0' && text[j] <= '9' || text[j] == '.') {
+				j--
+			}
+			tempStart = j + 1
+			break
+		}
+	}
+
+	if tempStart == -1 || tempEnd == -1 {
+		return 0, "", fmt.Errorf("temperature not found in response: %s", text)
+	}
+
+	tempStr := text[tempStart:tempEnd]
+	temperature := 0.0
+	if _, err := fmt.Sscanf(tempStr, "%f", &temperature); err != nil {
+		return 0, "", fmt.Errorf("failed to parse temperature '%s': %w", tempStr, err)
+	}
+
+	// Extract description (everything after "°C, ")
+	description := ""
+	descStart := tempEnd + 4 // Skip "°C, "
+	if descStart < len(text) {
+		description = text[descStart:]
+	}
+
+	return temperature, description, nil
+}
+
+// parseDateTimeResponse parses datetime text response
+// Expected format: "Time in {city}: {time} ({timezone}, UTC{offset})"
+func parseDateTimeResponse(text string) (string, string, string, error) {
+	// Simple parsing for now - extract components from known format
+	// Example: "Time in New York: 2025-10-02 14:30:00 (America/New_York, UTC-05:00)"
+
+	// Find the colon after city
+	colonIdx := -1
+	for i := 0; i < len(text); i++ {
+		if text[i] == ':' {
+			colonIdx = i
+			break
+		}
+	}
+
+	if colonIdx == -1 {
+		return "", "", "", fmt.Errorf("invalid datetime response format: %s", text)
+	}
+
+	// Extract everything after the colon
+	remainder := text[colonIdx+2:] // Skip ": "
+
+	// Find the opening parenthesis
+	parenIdx := -1
+	for i := 0; i < len(remainder); i++ {
+		if remainder[i] == '(' {
+			parenIdx = i
+			break
+		}
+	}
+
+	if parenIdx == -1 {
+		// No timezone info, just return the time
+		return remainder, "Unknown", "+00:00", nil
+	}
+
+	localTime := remainder[:parenIdx-1] // Remove space before paren
+
+	// Extract timezone and offset from parentheses
+	tzInfo := remainder[parenIdx+1 : len(remainder)-1] // Remove ( and )
+
+	// Split by comma
+	parts := []string{}
+	current := ""
+	for _, ch := range tzInfo {
+		if ch == ',' {
+			parts = append(parts, current)
+			current = ""
+		} else if ch != ' ' || len(current) > 0 {
+			current += string(ch)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	timezone := "Unknown"
+	utcOffset := "+00:00"
+
+	if len(parts) >= 1 {
+		timezone = parts[0]
+	}
+	if len(parts) >= 2 {
+		utcOffset = parts[1]
+		// Remove "UTC" prefix if present
+		if len(utcOffset) > 3 && utcOffset[:3] == "UTC" {
+			utcOffset = utcOffset[3:]
+		}
+	}
+
+	return localTime, timezone, utcOffset, nil
 }
