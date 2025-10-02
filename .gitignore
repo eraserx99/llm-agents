@@ -32,7 +32,8 @@ go-build/
 .env.*.local
 
 # IDE specific files
-.vscode/
+# Keep .vscode for team development
+# .vscode/
 .idea/
 *.swp
 *.swo
