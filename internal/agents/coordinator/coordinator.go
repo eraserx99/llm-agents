@@ -4,12 +4,15 @@ package coordinator
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/steve/llm-agents/internal/agents/datetime"
 	"github.com/steve/llm-agents/internal/agents/echo"
 	"github.com/steve/llm-agents/internal/agents/temperature"
+	"github.com/steve/llm-agents/internal/config"
 	"github.com/steve/llm-agents/internal/models"
 	"github.com/steve/llm-agents/internal/utils"
 )
@@ -26,13 +29,62 @@ type Coordinator struct {
 
 // NewCoordinator creates a new coordinator agent
 func NewCoordinator(openRouterAPIKey, weatherServerURL, datetimeServerURL, echoServerURL string, timeout time.Duration) *Coordinator {
+	// Check for TLS environment variables
+	tlsConfig := detectTLSConfig()
+
+	var temperatureAgent *temperature.Agent
+	var datetimeAgent *datetime.Agent
+	var echoAgent *echo.Agent
+
+	if tlsConfig != nil {
+		// Create TLS-enabled agents
+		utils.Info("TLS enabled - creating secure agents with client certificates")
+		temperatureAgent = temperature.NewTLSAgent(weatherServerURL, timeout, tlsConfig)
+		datetimeAgent = datetime.NewTLSAgent(datetimeServerURL, timeout, tlsConfig)
+		echoAgent = echo.NewTLSAgent(echoServerURL, timeout, tlsConfig)
+	} else {
+		// Create standard HTTP agents
+		utils.Info("Using HTTP mode - creating standard agents")
+		temperatureAgent = temperature.NewAgent(weatherServerURL, timeout)
+		datetimeAgent = datetime.NewAgent(datetimeServerURL, timeout)
+		echoAgent = echo.NewAgent(echoServerURL, timeout)
+	}
+
 	return &Coordinator{
 		llmClient:        NewLLMClient(openRouterAPIKey),
-		temperatureAgent: temperature.NewAgent(weatherServerURL, timeout),
-		datetimeAgent:    datetime.NewAgent(datetimeServerURL, timeout),
-		echoAgent:        echo.NewAgent(echoServerURL, timeout),
+		temperatureAgent: temperatureAgent,
+		datetimeAgent:    datetimeAgent,
+		echoAgent:        echoAgent,
 		requestCounter:   0,
 	}
+}
+
+// detectTLSConfig detects TLS configuration from environment variables
+func detectTLSConfig() *config.TLSConfig {
+	tlsEnabled := os.Getenv("TLS_ENABLED")
+	if tlsEnabled != "true" {
+		return nil
+	}
+
+	certDir := os.Getenv("TLS_CERT_DIR")
+	if certDir == "" {
+		certDir = "./certs"
+	}
+
+	demoMode := os.Getenv("TLS_DEMO_MODE") == "true"
+
+	// Parse TLS port if provided
+	tlsPort := 8443 // default
+	if portStr := os.Getenv("WEATHER_MCP_TLS_PORT"); portStr != "" {
+		if port, err := strconv.Atoi(portStr); err == nil {
+			tlsPort = port
+		}
+	}
+
+	// Use the proper constructor to get all defaults
+	tlsConfig := config.NewTLSConfig(certDir, demoMode)
+	tlsConfig.Port = tlsPort
+	return tlsConfig
 }
 
 // ProcessQuery processes a user query and coordinates sub-agents

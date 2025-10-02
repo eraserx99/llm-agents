@@ -1,6 +1,6 @@
 # Makefile for LLM Multi-Agent System
 
-.PHONY: build clean test lint fmt vet run-servers help
+.PHONY: build clean test lint fmt vet run-servers run-servers-tls stop-servers generate-certs demo dev-setup install-tools help
 
 # Build all binaries
 build:
@@ -10,6 +10,7 @@ build:
 	go build -o bin/weather-mcp ./cmd/weather-mcp
 	go build -o bin/datetime-mcp ./cmd/datetime-mcp
 	go build -o bin/echo-mcp ./cmd/echo-mcp
+	go build -o bin/cert-gen ./cmd/cert-gen
 	@echo "Build complete! Binaries are in ./bin/"
 
 # Clean build artifacts
@@ -61,7 +62,7 @@ deps:
 
 # Start MCP servers in background
 run-servers:
-	@echo "Starting MCP servers..."
+	@echo "Starting MCP servers (HTTP mode)..."
 	@echo "Starting weather MCP server on port 8081..."
 	@./bin/weather-mcp > weather-mcp.log 2>&1 &
 	@echo "Starting datetime MCP server on port 8082..."
@@ -71,6 +72,19 @@ run-servers:
 	@echo "All servers started! Check *.log files for output."
 	@echo "Use 'make stop-servers' to stop them."
 
+# Start MCP servers with TLS in background
+run-servers-tls: generate-certs
+	@echo "Starting MCP servers with TLS enabled..."
+	@echo "All servers will run both HTTP and HTTPS endpoints"
+	@echo "Starting weather MCP server (HTTP: 8081, HTTPS: 8443)..."
+	@export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs && ./bin/weather-mcp --tls > weather-mcp-tls.log 2>&1 &
+	@echo "Starting datetime MCP server (HTTP: 8082, HTTPS: 8444)..."
+	@export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs && ./bin/datetime-mcp --tls > datetime-mcp-tls.log 2>&1 &
+	@echo "Starting echo MCP server (HTTP: 8083, HTTPS: 8445)..."
+	@export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs && ./bin/echo-mcp --tls > echo-mcp-tls.log 2>&1 &
+	@echo "All TLS servers started! Check *-tls.log files for output."
+	@echo "Use 'make stop-servers' to stop them."
+
 # Stop MCP servers
 stop-servers:
 	@echo "Stopping MCP servers..."
@@ -78,6 +92,12 @@ stop-servers:
 	@pkill -f datetime-mcp || true
 	@pkill -f echo-mcp || true
 	@echo "All servers stopped!"
+
+# Generate TLS certificates for mTLS
+generate-certs: build
+	@echo "Generating TLS certificates..."
+	@./bin/cert-gen
+	@echo "Certificates generated in ./certs/ directory!"
 
 # Example usage demonstrations
 demo: build
@@ -121,20 +141,30 @@ install-tools:
 help:
 	@echo "LLM Multi-Agent System Makefile"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make build         - Build all binaries"
-	@echo "  make clean         - Clean build artifacts"
-	@echo "  make test          - Run tests"
-	@echo "  make test-race     - Run tests with race detection"
-	@echo "  make test-verbose  - Run tests with verbose output"
-	@echo "  make fmt           - Format code"
-	@echo "  make vet           - Vet code"
-	@echo "  make lint          - Lint code (requires golangci-lint)"
-	@echo "  make quality       - Run fmt, vet, and test"
-	@echo "  make deps          - Download and tidy dependencies"
-	@echo "  make run-servers   - Start MCP servers in background"
-	@echo "  make stop-servers  - Stop MCP servers"
-	@echo "  make demo          - Show usage examples"
-	@echo "  make dev-setup     - Complete development setup"
-	@echo "  make install-tools - Install optional development tools"
-	@echo "  make help          - Show this help message"
+	@echo "Build Targets:"
+	@echo "  make build             - Build all components"
+	@echo "  make clean             - Clean build artifacts"
+	@echo ""
+	@echo "Testing & Quality:"
+	@echo "  make test              - Run tests"
+	@echo "  make test-race         - Run tests with race detection"
+	@echo "  make test-verbose      - Run tests with verbose output"
+	@echo "  make fmt               - Format code"
+	@echo "  make vet               - Vet code"
+	@echo "  make lint              - Lint code (requires golangci-lint)"
+	@echo "  make quality           - Run fmt, vet, and test"
+	@echo ""
+	@echo "Server Management:"
+	@echo "  make run-servers       - Start MCP servers in background (HTTP mode)"
+	@echo "  make run-servers-tls   - Start MCP servers with mTLS enabled"
+	@echo "  make stop-servers      - Stop all MCP servers"
+	@echo "  make generate-certs    - Generate TLS certificates for mTLS"
+	@echo ""
+	@echo "Demos:"
+	@echo "  make demo              - Show multi-agent usage examples"
+	@echo ""
+	@echo "Setup & Tools:"
+	@echo "  make deps              - Download and tidy dependencies"
+	@echo "  make dev-setup         - Complete development setup"
+	@echo "  make install-tools     - Install optional development tools"
+	@echo "  make help              - Show this help message"

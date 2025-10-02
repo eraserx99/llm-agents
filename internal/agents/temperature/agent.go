@@ -6,20 +6,39 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/steve/llm-agents/internal/mcp/client"
+	"github.com/steve/llm-agents/internal/agents/client"
+	"github.com/steve/llm-agents/internal/config"
 	"github.com/steve/llm-agents/internal/models"
 	"github.com/steve/llm-agents/internal/utils"
 )
 
 // Agent implements the temperature sub-agent
 type Agent struct {
-	mcpClient *client.Client
+	mcpClient *client.MCPClient
 }
 
 // NewAgent creates a new temperature agent
 func NewAgent(weatherServerURL string, timeout time.Duration) *Agent {
+	mcpClient, err := client.NewMCPClient(weatherServerURL, timeout)
+	if err != nil {
+		utils.Error("Failed to create MCP client: %v", err)
+		return nil
+	}
 	return &Agent{
-		mcpClient: client.NewClient(weatherServerURL, timeout),
+		mcpClient: mcpClient,
+	}
+}
+
+// NewTLSAgent creates a new temperature agent with TLS support
+func NewTLSAgent(weatherServerURL string, timeout time.Duration, tlsConfig *config.TLSConfig) *Agent {
+	mcpClient, err := client.NewTLSMCPClient(weatherServerURL, timeout, tlsConfig)
+	if err != nil {
+		utils.Error("Failed to create TLS MCP client: %v", err)
+		// Fall back to regular client
+		return NewAgent(weatherServerURL, timeout)
+	}
+	return &Agent{
+		mcpClient: mcpClient,
 	}
 }
 

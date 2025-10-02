@@ -206,3 +206,23 @@ Stable IDs (e.g., **BP-1**, **ERR-2**) enable precise code‑review comments, ch
 3. Are there any common data structures and algorithms that would make this function much easier to follow and more robust? Parsers, trees, stacks / queues, etc.
 4. Does it have any hidden untested dependencies or any values that can be factored out into the arguments instead? Only care about non-trivial dependencies that can actually change or affect the function.
 5. Brainstorm 3 better function names and see if the current name is the best, consistent with rest of codebase.
+
+## Current Development Context
+
+### Active Feature: mTLS Enhancement for MCP Servers (002-can-you-enhance)
+
+**Language/Framework**: Go 1.25.1 with Go standard library (net/http, crypto/tls, crypto/x509)
+**Architecture**: Single backend service architecture with multiple MCP servers
+**Storage**: File-based certificate storage in `certs/` directory
+**Testing**: go test with race detector, integration tests for mTLS connections
+
+**Key Components**:
+- 3 MCP servers: weather-mcp (8081→8443), datetime-mcp (8082→8444), echo-mcp (8083→8445)
+- Mutual TLS authentication between coordinator agent and servers
+- Self-signed certificate generation for demo purposes
+- Configurable validation modes (strict/demo)
+
+**Recent Changes** (Last 3 features):
+1. **002-can-you-enhance**: mTLS Enhancement - Adding mutual TLS authentication to secure MCP server communication
+2. **Initial codebase**: Basic MCP servers with HTTP-only communication
+3. **Setup**: Project structure with coordinator agent pattern
