@@ -2,8 +2,6 @@ package integration
 
 import (
 	"testing"
-
-	"github.com/steve/llm-agents/internal/config"
 )
 
 // TestDateTimeMCPServerTLS tests the datetime MCP server with TLS support

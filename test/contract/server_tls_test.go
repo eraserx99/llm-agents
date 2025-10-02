@@ -1,7 +1,6 @@
 package contract
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -29,7 +28,7 @@ func TestTLSServerInterfaceContract(t *testing.T) {
 	// Test 1: Server should start with TLS configuration
 	t.Run("server_starts_with_tls_config", func(t *testing.T) {
 		// Create mock TLS config
-		tlsConfig := config.TLSConfig{
+		_ = config.TLSConfig{
 			CertDir:       "./test-certs",
 			ServerCert:    "./test-certs/server.crt",
 			ServerKey:     "./test-certs/server.key",
@@ -80,7 +79,7 @@ func TestTLSServerConstructorContract(t *testing.T) {
 	t.Skip("Server constructors not yet implemented - this test should fail")
 
 	t.Run("new_tls_server_constructor", func(t *testing.T) {
-		tlsConfig := config.TLSConfig{
+		_ = config.TLSConfig{
 			CertDir:       "./test-certs",
 			DemoMode:      true,
 			MinTLSVersion: 0x0303,
@@ -121,7 +120,7 @@ func TestServerTLSConfigurationContract(t *testing.T) {
 
 	t.Run("validate_tls_config_on_startup", func(t *testing.T) {
 		// Test that invalid TLS config prevents server startup
-		invalidConfig := config.TLSConfig{
+		_ = config.TLSConfig{
 			CertDir: "", // Invalid: empty cert dir
 			Port:    70000, // Invalid: port out of range
 		}
@@ -143,7 +142,7 @@ func TestServerTLSStatusContract(t *testing.T) {
 
 	t.Run("server_status_response", func(t *testing.T) {
 		// Test server status response structure
-		expectedStatus := ServerStatusResponse{
+		_ = ServerStatusResponse{
 			ServerName:  "weather-mcp",
 			HTTPPort:    8081,
 			TLSPort:     8443,
@@ -181,7 +180,7 @@ func TestTLSCertificateInfoContract(t *testing.T) {
 	t.Skip("Certificate info retrieval not yet implemented - this test should fail")
 
 	t.Run("certificate_info_response", func(t *testing.T) {
-		expectedInfo := CertificateInfoResponse{
+		_ = CertificateInfoResponse{
 			Subject:      "CN=mcp-server,O=MCP Demo,C=US",
 			Issuer:       "CN=MCP Demo CA,O=MCP Demo,C=US",
 			SerialNumber: "123456",
@@ -219,7 +218,7 @@ func TestTLSConnectionInfoContract(t *testing.T) {
 	t.Skip("TLS connection info not yet implemented - this test should fail")
 
 	t.Run("tls_connection_info", func(t *testing.T) {
-		expectedConnInfo := TLSConnectionInfo{
+		_ = TLSConnectionInfo{
 			RemoteAddr:        "127.0.0.1:54321",
 			TLSVersion:        "TLS 1.3",
 			CipherSuite:       "TLS_AES_256_GCM_SHA384",
@@ -239,12 +238,3 @@ func TestTLSConnectionInfoContract(t *testing.T) {
 	})
 }
 
-// TLSConnectionInfo defines the expected TLS connection info structure
-type TLSConnectionInfo struct {
-	RemoteAddr        string    `json:"remote_addr"`
-	TLSVersion        string    `json:"tls_version"`
-	CipherSuite       string    `json:"cipher_suite"`
-	ClientCertCN      string    `json:"client_cert_cn"`
-	HandshakeComplete bool      `json:"handshake_complete"`
-	EstablishedAt     time.Time `json:"established_at"`
-}

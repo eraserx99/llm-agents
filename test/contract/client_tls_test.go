@@ -9,6 +9,32 @@ import (
 	"github.com/steve/llm-agents/internal/models"
 )
 
+// TLSConnectionInfo represents TLS connection information (placeholder)
+type TLSConnectionInfo struct {
+	Version           string    `json:"version"`
+	CipherSuite       string    `json:"cipher_suite"`
+	ServerName        string    `json:"server_name"`
+	Verified          bool      `json:"verified"`
+	RemoteAddr        string    `json:"remote_addr"`
+	TLSVersion        string    `json:"tls_version"`
+	ClientCertCN      string    `json:"client_cert_cn"`
+	HandshakeComplete bool      `json:"handshake_complete"`
+	EstablishedAt     time.Time `json:"established_at"`
+}
+
+// CertificateValidationRequest represents a certificate validation request (placeholder)
+type CertificateValidationRequest struct {
+	CertPath   string `json:"cert_path"`
+	CACertPath string `json:"ca_cert_path"`
+	ServerName string `json:"server_name"`
+}
+
+// ClientConnectionStatus represents connection status (placeholder)
+type ClientConnectionStatus struct {
+	Connected bool   `json:"connected"`
+	Message   string `json:"message"`
+}
+
 // MockTLSClient represents the contract interface for TLS-enabled MCP clients
 // This interface should FAIL until implemented in internal/mcp/client/
 type MockTLSClient interface {
@@ -26,7 +52,7 @@ func TestTLSClientInterfaceContract(t *testing.T) {
 	// This test should FAIL until TLS client interface is implemented
 	t.Skip("TLS Client interface not yet implemented - this test should fail")
 
-	tlsConfig := config.TLSConfig{
+	_ = config.TLSConfig{ // placeholder for tlsConfig
 		CertDir:       "./test-certs",
 		ServerCert:    "./test-certs/server.crt",
 		ServerKey:     "./test-certs/server.key",
@@ -144,7 +170,7 @@ func TestClientConnectionTestContract(t *testing.T) {
 	t.Skip("Client connection testing not yet implemented - this test should fail")
 
 	t.Run("connection_test_request", func(t *testing.T) {
-		testRequest := ClientConnectionTestRequest{
+		_ = ClientConnectionTestRequest{ // placeholder for testRequest
 			TargetURL:  "https://localhost:8443",
 			TLSConfig:  config.TLSConfig{CertDir: "./test-certs", DemoMode: true},
 			TestMethod: "echo",
@@ -188,10 +214,10 @@ func TestCertificateValidationContract(t *testing.T) {
 	t.Skip("Certificate validation not yet implemented - this test should fail")
 
 	t.Run("certificate_validation_request", func(t *testing.T) {
-		validationRequest := CertificateValidationRequest{
-			CertificatePath: "./test-certs/client.crt",
-			PrivateKeyPath:  "./test-certs/client.key",
-			CACertPath:      "./test-certs/ca.crt",
+		_ = CertificateValidationRequest{ // placeholder for validationRequest
+			CertPath:   "./test-certs/client.crt",
+			CACertPath: "./test-certs/ca.crt",
+			ServerName: "localhost",
 		}
 
 		// This should validate the certificate (will fail until implemented)
@@ -208,12 +234,6 @@ func TestCertificateValidationContract(t *testing.T) {
 	})
 }
 
-// CertificateValidationRequest defines the expected validation request structure
-type CertificateValidationRequest struct {
-	CertificatePath string `json:"certificate_path"`
-	PrivateKeyPath  string `json:"private_key_path"`
-	CACertPath      string `json:"ca_cert_path"`
-}
 
 // CertificateValidationResponse defines the expected validation response structure
 type CertificateValidationResponse struct {
@@ -231,21 +251,9 @@ func TestClientConnectionStatusContract(t *testing.T) {
 	t.Skip("Connection status monitoring not yet implemented - this test should fail")
 
 	t.Run("client_connection_status", func(t *testing.T) {
-		expectedStatus := ClientConnectionStatus{
-			Connected:      true,
-			ServerURL:      "https://localhost:8443",
-			LastCall:       time.Now().Add(-5 * time.Minute),
-			TotalCalls:     150,
-			FailedCalls:    3,
-			AverageLatency: 25 * time.Millisecond,
-			TLSInfo: &TLSConnectionInfo{
-				RemoteAddr:        "127.0.0.1:8443",
-				TLSVersion:        "TLS 1.3",
-				CipherSuite:       "TLS_AES_256_GCM_SHA384",
-				ClientCertCN:      "mcp-client",
-				HandshakeComplete: true,
-				EstablishedAt:     time.Now().Add(-1 * time.Hour),
-			},
+		_ = ClientConnectionStatus{ // placeholder for expectedStatus
+			Connected: true,
+			Message:   "Connection active",
 		}
 
 		// client, _ := NewTLSClient("https://localhost:8443", tlsConfig, 30*time.Second)
@@ -259,23 +267,13 @@ func TestClientConnectionStatusContract(t *testing.T) {
 	})
 }
 
-// ClientConnectionStatus defines the expected connection status structure
-type ClientConnectionStatus struct {
-	Connected      bool              `json:"connected"`
-	ServerURL      string            `json:"server_url"`
-	LastCall       time.Time         `json:"last_call"`
-	TotalCalls     int               `json:"total_calls"`
-	FailedCalls    int               `json:"failed_calls"`
-	AverageLatency time.Duration     `json:"average_latency"`
-	TLSInfo        *TLSConnectionInfo `json:"tls_info,omitempty"`
-}
 
 // TestMCPMethodCallsContract tests MCP-specific method calls over TLS
 func TestMCPMethodCallsContract(t *testing.T) {
 	// This test should FAIL until MCP methods are implemented with TLS
 	t.Skip("MCP methods with TLS not yet implemented - this test should fail")
 
-	ctx := context.Background()
+	_ = context.Background() // placeholder for ctx
 
 	t.Run("call_weather_over_tls", func(t *testing.T) {
 		// client, _ := NewTLSClient("https://localhost:8443", tlsConfig, 30*time.Second)

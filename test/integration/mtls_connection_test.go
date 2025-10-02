@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/steve/llm-agents/internal/config"
 	mcptls "github.com/steve/llm-agents/internal/tls"
@@ -169,7 +168,7 @@ func TestTLSConfigurationValidation(t *testing.T) {
 		// Test that invalid certificate paths are rejected
 		// Will fail until path validation is implemented
 
-		invalidConfig := &config.TLSConfig{
+		_ = &config.TLSConfig{ // placeholder for invalidConfig
 			CertDir:    "/nonexistent",
 			ServerCert: "/nonexistent/server.crt",
 			ServerKey:  "/nonexistent/server.key",

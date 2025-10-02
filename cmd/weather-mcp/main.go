@@ -1,17 +1,34 @@
-// Weather MCP Server - provides temperature data via Model Context Protocol
+// Weather MCP Server using official MCP Go SDK with StreamableHTTPHandler
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"log"
+	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/steve/llm-agents/internal/config"
-	"github.com/steve/llm-agents/internal/mcp/server"
-	"github.com/steve/llm-agents/internal/mcp/weather"
+	mcptls "github.com/steve/llm-agents/internal/tls"
 	"github.com/steve/llm-agents/internal/utils"
 )
+
+type WeatherArgs struct {
+	City string `json:"city" jsonschema:"the city to get weather for"`
+}
+
+type WeatherResult struct {
+	Temperature float64 `json:"temperature"`
+	Unit        string  `json:"unit"`
+	Description string  `json:"description"`
+	City        string  `json:"city"`
+	Timestamp   string  `json:"timestamp"`
+}
 
 func main() {
 	// Parse command line flags
@@ -41,7 +58,54 @@ func main() {
 		}
 	}
 
-	var srv *server.Server
+	// Create MCP server using official SDK
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "weather-mcp",
+		Version: "v1.0.0",
+	}, nil)
+
+	// Add weather tool using the official SDK's generic AddTool function
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "getTemperature",
+		Description: "Get current temperature and weather conditions for a city",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, args WeatherArgs) (*mcp.CallToolResult, WeatherResult, error) {
+		utils.Info("Handling getTemperature request for city: %s", args.City)
+
+		// Simulate weather data (in real implementation, call actual weather API)
+		temperature := 20.0 + rand.Float64()*25.0 // 20-45°C
+		conditions := []string{"Sunny", "Partly cloudy", "Cloudy", "Light rain", "Clear"}
+		description := conditions[rand.Intn(len(conditions))]
+
+		result := WeatherResult{
+			Temperature: temperature,
+			Unit:        "°C",
+			Description: description,
+			City:        args.City,
+			Timestamp:   time.Now().Format(time.RFC3339),
+		}
+
+		utils.Info("Returning weather data: %+v", result)
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{
+					Text: fmt.Sprintf("Weather in %s: %.1f%s, %s",
+						result.City, result.Temperature, result.Unit, result.Description),
+				},
+			},
+		}, result, nil
+	})
+
+	// Create StreamableHTTPHandler using official SDK
+	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
+		return server
+	}, &mcp.StreamableHTTPOptions{JSONResponse: true})
+
+	// Setup HTTP routes
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", handler)
+
+	var tlsConfig *config.TLSConfig
 
 	if *useTLS {
 		// TLS mode - configure TLS
@@ -57,42 +121,51 @@ func main() {
 		}
 
 		demoMode := os.Getenv("TLS_DEMO_MODE") == "true"
+		tlsConfig = config.NewTLSConfig(certDir, demoMode)
 
-		// Create TLS configuration
-		tlsConfig := config.NewTLSConfig(certDir, demoMode)
-		tlsConfig.Port = tlsPort
-
-		// Create TLS-enabled server
-		srv = server.NewTLSServer("weather-mcp", httpPort, tlsPort, tlsConfig)
 		utils.Info("Weather MCP Server configured with TLS support")
 		utils.Info("HTTP port: %d, HTTPS port: %d", httpPort, tlsPort)
 		utils.Info("TLS demo mode: %v", demoMode)
 		utils.Info("Certificate directory: %s", certDir)
 	} else {
-		// HTTP-only mode
-		srv = server.NewServer("weather-mcp", httpPort)
 		utils.Info("Weather MCP Server configured for HTTP only")
 		utils.Info("HTTP port: %d", httpPort)
 	}
 
-	// Register weather handler
-	weatherHandler := weather.NewHandler()
-	srv.RegisterHandler("getTemperature", weatherHandler)
+	// Start HTTP server
+	go func() {
+		addr := fmt.Sprintf(":%d", httpPort)
+		utils.Info("Starting Weather MCP Server (HTTP) on %s", addr)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			log.Fatal("Failed to start HTTP server:", err)
+		}
+	}()
 
-	// Start server(s)
-	if *useTLS {
-		// Start both HTTP and HTTPS servers
-		if err := srv.StartBoth(); err != nil {
-			log.Fatal("Failed to start weather MCP servers:", err)
-		}
-		utils.Info("Weather MCP Server started with both HTTP and HTTPS support")
-	} else {
-		// Start HTTP server only
-		if err := srv.Start(); err != nil {
-			log.Fatal("Failed to start weather MCP server:", err)
-		}
-		utils.Info("Weather MCP Server started (HTTP only)")
+	// Start HTTPS server if TLS is enabled
+	if *useTLS && tlsConfig != nil {
+		go func() {
+			addr := fmt.Sprintf(":%d", tlsPort)
+			utils.Info("Starting Weather MCP Server (HTTPS) on %s", addr)
+
+			tlsLoader := mcptls.NewTLSLoader(tlsConfig)
+			serverTLSConfig, err := tlsLoader.LoadServerTLSConfig()
+			if err != nil {
+				log.Fatal("Failed to load TLS config:", err)
+			}
+
+			server := &http.Server{
+				Addr:      addr,
+				Handler:   mux,
+				TLSConfig: serverTLSConfig,
+			}
+
+			if err := server.ListenAndServeTLS("", ""); err != nil {
+				log.Fatal("Failed to start HTTPS server:", err)
+			}
+		}()
 	}
+
+	utils.Info("Weather MCP Server started with official SDK StreamableHTTPHandler")
 
 	// Keep the main goroutine alive
 	select {}

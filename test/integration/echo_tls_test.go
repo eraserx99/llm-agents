@@ -2,8 +2,6 @@ package integration
 
 import (
 	"testing"
-
-	"github.com/steve/llm-agents/internal/config"
 )
 
 // TestEchoMCPServerTLS tests the echo MCP server with TLS support

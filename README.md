@@ -1,6 +1,18 @@
 # LLM Multi-Agent System
 
-A Go-based demonstration of intelligent multi-agent coordination using Claude 3.5 Sonnet via OpenRouter. The system coordinates specialized sub-agents for temperature, datetime, and echo queries using Model Context Protocol (MCP) servers with optional **mutual TLS (mTLS) authentication**.
+A Go-based demonstration of intelligent multi-agent coordination using Claude 3.5 Sonnet via OpenRouter. The system coordinates specialized sub-agents for temperature, datetime, and echo queries using **official MCP Go SDK** with **MCP Streaming Protocol**, **StreamableHTTPHandler**, and optional **mutual TLS (mTLS) authentication**.
+
+## 🚀 MCP Streaming Protocol Implementation
+
+This project implements **MCP Streaming Protocol** using the **official MCP Go SDK** throughout the entire system, providing:
+
+- **Official MCP Go SDK Compliance**: Uses `github.com/modelcontextprotocol/go-sdk` (v0.7.0)
+- **StreamableHTTPHandler**: All servers use `mcp.NewStreamableHTTPHandler()` for proper streaming
+- **StreamableClientTransport**: All agents use official SDK clients with custom HTTP/SSE transport
+- **Unified Architecture**: Both legacy and SDK servers now use official MCP patterns
+- **Type-Safe Tool Registration**: Uses official SDK's generic `mcp.AddTool()` function
+- **Session Management**: Proper `mcp.ClientSession` handling with connection lifecycle
+- **mTLS Integration**: Mutual TLS authentication over streaming protocol
 
 ## 🏗️ Architecture
 
@@ -11,11 +23,145 @@ The system features **LLM-driven orchestration** where Claude 3.5 Sonnet analyze
 
 ### Components
 
-- **Coordinator Agent**: Main orchestrator using Claude 3.5 Sonnet
-- **Temperature Agent**: Retrieves weather data via MCP weather server
-- **DateTime Agent**: Handles timezone-aware datetime queries via MCP datetime server
-- **Echo Agent**: Simple text echo functionality for testing orchestration
-- **MCP Servers**: Three independent JSON-RPC 2.0 servers for data services
+- **Coordinator Agent**: Main orchestrator using Claude 3.5 Sonnet with official MCP SDK clients
+- **Temperature Agent**: Retrieves weather data via official MCP client with streaming transport
+- **DateTime Agent**: Handles timezone-aware datetime queries via official MCP client with streaming transport
+- **Echo Agent**: Simple text echo functionality via official MCP client with streaming transport
+- **MCP Servers**: All servers now use official `mcp.NewServer()` and `mcp.NewStreamableHTTPHandler()`
+- **Unified Architecture**: Both client and server sides use official MCP Go SDK throughout
+
+## 📡 MCP Streaming Protocol Details
+
+### Technical Architecture
+
+The system implements **Model Context Protocol Streaming** using the official MCP Go SDK throughout, with all servers using StreamableHTTPHandler and all agents using StreamableClientTransport:
+
+```
+┌─────────────────┐    HTTP POST     ┌──────────────────────┐
+│ Coordinator     │ ──────────────► │   MCP Servers        │
+│ Agent (Client)  │                 │ (weather/datetime/   │
+│                 │ ◄────────────── │  echo) w/ SDK        │
+└─────────────────┘   SSE Stream    └──────────────────────┘
+```
+
+### Protocol Implementation
+
+**1. Transport Layer (`internal/mcp/transport/http_sse.go`)**
+- Implements `mcp.Transport` and `mcp.Connection` interfaces from official SDK
+- **Single Endpoint**: All communication via `/mcp` endpoint using MCP Streaming Protocol
+- **Bidirectional**: HTTP POST for requests, Server-Sent Events (SSE) for responses - all through one endpoint
+- **Message Format**: JSON-RPC 2.0 with proper `jsonrpc.EncodeMessage()` / `jsonrpc.DecodeMessage()`
+
+**2. Server Implementation (All MCP Servers)**
+```go
+// ALL servers now use official SDK with type-safe tool registration
+server := mcp.NewServer(&mcp.Implementation{
+    Name:    "weather-mcp", // or "datetime-mcp", "echo-mcp"
+    Version: "v1.0.0",
+}, nil)
+
+// Generic tool registration with typed arguments/results
+mcp.AddTool(server, &mcp.Tool{
+    Name:        "getTemperature", // or "getDateTime", "echo"
+    Description: "Get current temperature and weather conditions for a city",
+}, func(ctx context.Context, req *mcp.CallToolRequest, args WeatherArgs) (*mcp.CallToolResult, WeatherResult, error) {
+    // Tool implementation
+})
+
+// ALL servers use StreamableHTTPHandler
+handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
+    return server
+}, &mcp.StreamableHTTPOptions{JSONResponse: true})
+```
+
+**3. Client Implementation (All Agents)**
+```go
+// ALL agents now use official SDK client with custom transport
+client := mcp.NewClient(&mcp.Implementation{
+    Name:    "llm-agents-client", // Coordinator and all sub-agents
+    Version: "v1.0.0",
+}, nil)
+
+// Custom HTTP/SSE transport for streaming protocol
+mcpTransport := transport.NewClientTransport(serverURL, tlsConfig)
+
+// Connect with HTTP/SSE transport
+session, err := client.Connect(ctx, mcpTransport, nil)
+
+// Tool discovery and execution (used by all agents)
+tools, err := session.ListTools(ctx, &mcp.ListToolsParams{})
+result, err := session.CallTool(ctx, &mcp.CallToolParams{
+    Name: "getTemperature", // or "getDateTime", "echo"
+    Arguments: map[string]any{"city": "New York"},
+w})
+```
+
+### Message Flow
+
+**1. Connection Establishment**
+```
+Client → Server: POST /mcp (initial connection with MCP handshake)
+Server → Client: HTTP response with SSE stream establishment
+Bidirectional communication established via single /mcp endpoint
+```
+
+**2. Tool Discovery**
+```
+Client → Server: POST /mcp
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "id": 1
+}
+
+Server → Client: SSE Event (via /mcp endpoint)
+data: {
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [{"name": "getTemperature", ...}]
+  },
+  "id": 1
+}
+```
+
+**3. Tool Execution**
+```
+Client → Server: POST /mcp
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "getTemperature",
+    "arguments": {"city": "Tokyo"}
+  },
+  "id": 2
+}
+
+Server → Client: SSE Event (via /mcp endpoint)
+data: {
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [{
+      "type": "text",
+      "text": "Weather in Tokyo: 37.3°C, Light rain"
+    }]
+  },
+  "id": 2
+}
+```
+
+### Single MCP Endpoint
+
+**Unified MCP Endpoint**: `/mcp` (handles all communication)
+- **HTTP POST**: For client requests (JSON-RPC 2.0 messages)
+  - Content-Type: `application/json`
+  - Accepts: MCP protocol messages
+- **Server-Sent Events**: For server responses (via same endpoint)
+  - Content-Type: `text/event-stream`
+  - Headers: `Cache-Control: no-cache`, `Connection: keep-alive`
+  - Stream Format: `data: {json-rpc-message}\n\n`
+
+**Note**: The official MCP Streaming Protocol uses a single endpoint that handles both HTTP requests and SSE responses, implemented via `mcp.NewStreamableHTTPHandler()`.
 
 ## 🚀 Quick Start
 
@@ -42,6 +188,10 @@ go build -o bin/weather-mcp ./cmd/weather-mcp
 go build -o bin/datetime-mcp ./cmd/datetime-mcp
 go build -o bin/echo-mcp ./cmd/echo-mcp
 go build -o bin/cert-gen ./cmd/cert-gen          # Certificate generator (for TLS)
+
+# MCP Streaming Protocol (Official SDK) builds:
+go build -o bin/weather-mcp-sdk ./cmd/weather-mcp-sdk    # Official SDK server with HTTP/SSE
+go build -o bin/test-mcp-client ./cmd/test-mcp-client    # Official SDK client
 ```
 
 ### Setup
@@ -55,34 +205,86 @@ export OPENROUTER_API_KEY="your-api-key-here"
 
 ### Running the System
 
+#### Primary System: Official MCP SDK with Streaming Protocol
+
+All servers now use the official MCP Go SDK with StreamableHTTPHandler throughout the system.
+
 1. **Start MCP Servers** (in separate terminals):
 ```bash
-# Terminal 1: Weather MCP Server (port 8081)
+# Terminal 1: Weather MCP Server (port 8081) - Official SDK
 ./bin/weather-mcp
 
-# Terminal 2: DateTime MCP Server (port 8082)
+# Terminal 2: DateTime MCP Server (port 8082) - Official SDK
 ./bin/datetime-mcp
 
-# Terminal 3: Echo MCP Server (port 8083)
+# Terminal 3: Echo MCP Server (port 8083) - Official SDK
 ./bin/echo-mcp
 ```
 
-2. **Run Queries**:
+2. **Run Queries with Streaming Coordinator**:
 ```bash
-# Temperature query
+# Temperature query (uses official MCP SDK client)
 ./bin/llm-agents -city "New York" -query "What's the temperature?"
 
-# DateTime query
+# DateTime query (uses official MCP SDK client)
 ./bin/llm-agents -city "Los Angeles" -query "What time is it?"
 
-# Combined query (runs in parallel)
+# Combined query (parallel execution with streaming)
 ./bin/llm-agents -city "Chicago" -query "What's the weather and time?"
 
-# Echo query (only invokes echo agent)
+# Echo query (streaming echo agent)
 ./bin/llm-agents -query "echo hello world"
 
-# Verbose mode to see orchestration details
+# Verbose mode to see streaming orchestration details
 ./bin/llm-agents -city "Miami" -query "temperature please" -verbose
+```
+
+#### Demo: Direct MCP SDK Testing
+
+**Test the streaming protocol directly with the test client:**
+
+1. **Start Test MCP Server** (Terminal 1):
+```bash
+# HTTP Mode (port 8091)
+./bin/weather-mcp-sdk -verbose
+
+# OR mTLS Mode (port 8491)
+export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
+./bin/weather-mcp-sdk -tls -verbose
+```
+
+2. **Test with MCP Client** (Terminal 2):
+```bash
+# HTTP Mode Test
+./bin/test-mcp-client -verbose -city "New York"
+
+# mTLS Mode Test
+export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
+./bin/test-mcp-client -tls -verbose -city "Tokyo"
+```
+
+**Expected Output:**
+```
+[INFO] MCP HTTP/SSE client transport created with mTLS
+[INFO] Connecting to MCP server with HTTP/SSE streaming transport...
+[INFO] Connected to MCP server successfully!
+[INFO] Listing available tools...
+[INFO] Available tools:
+[INFO]   - getTemperature: Get current temperature and weather conditions for a city
+[INFO] Calling getTemperature tool for city: Tokyo
+[INFO] Tool call successful!
+
+=== MCP Tool Call Results ===
+Tool: getTemperature
+City: Tokyo
+Response:
+  Weather in Tokyo: 37.3°C, Light rain
+
+=== MCP Streaming Test Complete ===
+✅ Successfully connected using MCP HTTP/SSE streaming transport
+✅ Tool listing worked
+✅ Tool execution worked
+✅ mTLS authentication successful
 ```
 
 ## 🔐 TLS/mTLS Security (Optional)
@@ -180,10 +382,13 @@ ECHO_MCP_TLS_PORT=8445     # HTTPS port for echo server
 # Set TLS environment
 export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
 
-# Servers run both HTTP and HTTPS
-./bin/weather-mcp --tls    # HTTP: 8080, HTTPS: 8443
-./bin/datetime-mcp --tls   # HTTP: 8081, HTTPS: 8444
-./bin/echo-mcp --tls       # HTTP: 8082, HTTPS: 8445
+# Option 1: Use Makefile target (recommended)
+make run-servers-tls  # Starts all servers with TLS enabled
+
+# Option 2: Start servers manually
+./bin/weather-mcp --tls    # HTTP: 8081, HTTPS: 8443
+./bin/datetime-mcp --tls   # HTTP: 8082, HTTPS: 8444
+./bin/echo-mcp --tls       # HTTP: 8083, HTTPS: 8445
 
 # Coordinator auto-detects and uses HTTPS clients with mTLS
 ./bin/llm-agents -city "Boston" -query "temperature"
@@ -308,23 +513,36 @@ The system supports 100+ US cities with proper timezone handling:
 ### Project Structure
 ```
 ├── cmd/
-│   ├── main/           # CLI application
-│   ├── weather-mcp/    # Weather MCP server
-│   ├── datetime-mcp/   # DateTime MCP server
-│   ├── echo-mcp/       # Echo MCP server
-│   └── cert-gen/       # Certificate generator for TLS
+│   ├── main/                # CLI application
+│   ├── weather-mcp/         # Weather MCP server (legacy JSON-RPC)
+│   ├── datetime-mcp/        # DateTime MCP server (legacy JSON-RPC)
+│   ├── echo-mcp/            # Echo MCP server (legacy JSON-RPC)
+│   ├── weather-mcp-sdk/     # Official MCP SDK server with HTTP/SSE
+│   ├── test-mcp-client/     # Official MCP SDK client
+│   └── cert-gen/            # Certificate generator for TLS
 ├── internal/
-│   ├── agents/         # Agent implementations
-│   ├── mcp/           # MCP server framework
-│   ├── config/        # Configuration (including TLS)
-│   ├── tls/           # TLS certificate management
-│   └── utils/         # Utilities
-├── test/              # Test files
-└── certs/             # TLS certificates (generated)
-    ├── ca.crt         # Certificate Authority
-    ├── server.crt     # Server certificate
-    └── client.crt     # Client certificate
+│   ├── agents/              # Agent implementations
+│   ├── mcp/                 # MCP server framework
+│   │   └── transport/       # HTTP/SSE transport for official SDK
+│   │       └── http_sse.go  # Custom transport implementation
+│   ├── config/              # Configuration (including TLS)
+│   ├── tls/                 # TLS certificate management
+│   └── utils/               # Utilities
+├── test/                    # Test files
+├── go.mod                   # Go module with official MCP SDK
+└── certs/                   # TLS certificates (generated)
+    ├── ca.crt               # Certificate Authority
+    ├── server.crt           # Server certificate
+    └── client.crt           # Client certificate
 ```
+
+### Key Files
+
+**MCP Streaming Protocol Implementation:**
+- `internal/mcp/transport/http_sse.go` - Custom HTTP/SSE transport for official MCP SDK
+- `cmd/weather-mcp-sdk/main.go` - Official SDK server with type-safe tool registration
+- `cmd/test-mcp-client/main.go` - Official SDK client with streaming support
+- `go.mod` - Includes `github.com/modelcontextprotocol/go-sdk v0.7.0`
 
 ### Testing
 ```bash
@@ -368,7 +586,9 @@ Options:
 ```
 
 ### MCP Protocol
-All MCP servers implement JSON-RPC 2.0 protocol:
+
+#### Legacy JSON-RPC Servers
+All traditional MCP servers implement JSON-RPC 2.0 protocol:
 
 **Weather Server (port 8081)**
 ```json
@@ -400,6 +620,39 @@ All MCP servers implement JSON-RPC 2.0 protocol:
 }
 ```
 
+#### MCP Streaming Protocol (Official SDK)
+
+**MCP SDK Server (port 8091/8491)** - HTTP/SSE transport:
+
+**Tool Discovery**: `POST /mcp`
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "id": 1
+}
+```
+
+**Tool Execution**: `POST /mcp`
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "getTemperature",
+    "arguments": {"city": "Tokyo"}
+  },
+  "id": 2
+}
+```
+
+**SSE Stream**: `GET /sse`
+```
+data: {"jsonrpc":"2.0","result":{"tools":[...]},"id":1}
+
+data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Weather in Tokyo: 37.3°C, Light rain"}]},"id":2}
+```
+
 ## ⚙️ How It Works
 
 1. **User Query**: CLI accepts natural language query
@@ -422,8 +675,24 @@ The system gracefully handles:
 
 **MCP servers not starting?**
 - Check if ports 8081-8083 (HTTP) or 8443-8445 (HTTPS) are available
+- For MCP SDK: Check ports 8091 (HTTP) or 8491 (HTTPS)
 - Look for error messages in server output
 - For TLS mode, ensure certificates exist: `ls -la certs/`
+
+**MCP Streaming Protocol issues?**
+- Verify official SDK server is running: `./bin/weather-mcp-sdk -verbose`
+- Test HTTP endpoints directly:
+  ```bash
+  # Test SSE endpoint
+  curl -N http://localhost:8091/sse
+  
+  # Test MCP endpoint
+  curl -X POST http://localhost:8091/mcp \
+    -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+  ```
+- For mTLS: Ensure client and server use same certificates
+- Check for SSE message parsing errors in client logs
 
 **TLS/Certificate issues?**
 - Generate certificates: `./bin/cert-gen`
@@ -467,5 +736,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🔗 Links
 
 - [OpenRouter](https://openrouter.ai) - Claude 3.5 Sonnet API access
-- [MCP Specification](https://modelcontextprotocol.io) - Model Context Protocol
+- [MCP Specification](https://modelcontextprotocol.io) - Model Context Protocol specification
+- [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) - Official MCP Go SDK (used in this project)
+- [MCP Go SDK Documentation](https://pkg.go.dev/github.com/modelcontextprotocol/go-sdk) - Official Go SDK API documentation
 - [wttr.in](https://wttr.in) - Free weather API used by weather MCP server

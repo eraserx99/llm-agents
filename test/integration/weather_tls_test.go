@@ -1,13 +1,10 @@
 package integration
 
 import (
-	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/steve/llm-agents/internal/config"
-	"github.com/steve/llm-agents/internal/models"
 	mcptls "github.com/steve/llm-agents/internal/tls"
 )
 
@@ -214,7 +211,7 @@ func TestWeatherServerTLSConfiguration(t *testing.T) {
 		// Test that weather server validates TLS configuration on startup
 		// Will fail until configuration validation is implemented
 
-		invalidConfig := config.MCPServerConfig{
+		_ = config.MCPServerConfig{ // placeholder for invalidConfig
 			Name:       "weather-mcp-test",
 			HTTPPort:   8081,
 			TLSPort:    8081, // Same as HTTP port - invalid
@@ -306,6 +303,14 @@ func startWeatherServerTLS(t *testing.T, tlsConfig *config.TLSConfig) interface{
 	// This function should start a weather MCP server with TLS
 	// Will be implemented in the core implementation phase
 	panic("startWeatherServerTLS not implemented yet")
+}
+
+// CertificateInfoResponse represents certificate information (placeholder)
+type CertificateInfoResponse struct {
+	Subject   string
+	Issuer    string
+	NotBefore string
+	NotAfter  string
 }
 
 func getServerCertificateInfo(address string) (*CertificateInfoResponse, error) {
