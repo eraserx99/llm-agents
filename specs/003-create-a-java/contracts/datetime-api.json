@@ -1,0 +1,258 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DateTime MCP Server API Contract",
+  "description": "API contract for DateTime MCP server - must match Go implementation exactly",
+  "version": "1.0.0",
+  "server": "datetime-mcp",
+
+  "transport": {
+    "protocol": "MCP Streaming Protocol (JSON-RPC 2.0 over HTTP/SSE)",
+    "endpoint": "/mcp",
+    "httpPort": 8082,
+    "httpsPort": 8444
+  },
+
+  "tool": {
+    "name": "getDateTime",
+    "description": "Get current date and time information for a city",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string",
+          "description": "the city to get datetime for"
+        }
+      },
+      "required": ["city"]
+    }
+  },
+
+  "request": {
+    "type": "object",
+    "required": ["jsonrpc", "method", "params", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "method": {
+        "type": "string",
+        "const": "tools/call"
+      },
+      "params": {
+        "type": "object",
+        "required": ["name", "arguments"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "getDateTime"
+          },
+          "arguments": {
+            "type": "object",
+            "required": ["city"],
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "method": "tools/call",
+      "params": {
+        "name": "getDateTime",
+        "arguments": {
+          "city": "Los Angeles"
+        }
+      },
+      "id": 1
+    }
+  },
+
+  "response": {
+    "type": "object",
+    "required": ["jsonrpc", "result", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "result": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "text"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "text"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^Time in .+: \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\(.+, UTC[+-]\\d{2}:\\d{2}\\)$",
+                  "description": "Format: 'Time in {city}: {localTime} ({timezone}, UTC{offset})'"
+                }
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Time in Los Angeles: 2024-09-23 11:30:45 (America/Los_Angeles, UTC-07:00)"
+          }
+        ]
+      },
+      "id": 1
+    }
+  },
+
+  "dateTimeDataFormat": {
+    "description": "Internal datetime data structure (not exposed in MCP response, but logged)",
+    "type": "object",
+    "required": ["local_time", "timezone", "utc_offset", "city", "timestamp"],
+    "properties": {
+      "local_time": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+        "description": "Format: yyyy-MM-dd HH:mm:ss"
+      },
+      "timezone": {
+        "type": "string",
+        "description": "IANA timezone identifier"
+      },
+      "utc_offset": {
+        "type": "string",
+        "pattern": "^[+-]\\d{2}:\\d{2}$",
+        "description": "Format: ±HH:MM"
+      },
+      "city": {
+        "type": "string"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 format (RFC3339)"
+      }
+    },
+    "example": {
+      "local_time": "2024-09-23 11:30:45",
+      "timezone": "America/Los_Angeles",
+      "utc_offset": "-07:00",
+      "city": "Los Angeles",
+      "timestamp": "2024-09-23T18:30:45Z"
+    }
+  },
+
+  "supportedCities": {
+    "description": "City to timezone mappings (matches Go implementation)",
+    "mappings": [
+      {"city": "New York", "aliases": ["NYC"], "timezone": "America/New_York"},
+      {"city": "Los Angeles", "aliases": ["LA"], "timezone": "America/Los_Angeles"},
+      {"city": "Chicago", "aliases": [], "timezone": "America/Chicago"},
+      {"city": "Denver", "aliases": [], "timezone": "America/Denver"},
+      {"city": "London", "aliases": [], "timezone": "Europe/London"},
+      {"city": "Tokyo", "aliases": [], "timezone": "Asia/Tokyo"}
+    ],
+    "defaultTimezone": "America/New_York"
+  },
+
+  "compatibilityTests": [
+    {
+      "name": "Basic datetime query",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "getDateTime",
+          "arguments": {"city": "New York"}
+        },
+        "id": 1
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "<matches_pattern: Time in New York: \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\(America/New_York, UTC[+-]\\d{2}:\\d{2}\\)>"
+            }
+          ]
+        },
+        "id": 1
+      }
+    },
+    {
+      "name": "City alias (NYC)",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "getDateTime",
+          "arguments": {"city": "NYC"}
+        },
+        "id": 2
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "<matches_pattern: Time in NYC: .+ \\(America/New_York, .+\\)>"
+            }
+          ]
+        },
+        "id": 2
+      }
+    },
+    {
+      "name": "London (different timezone)",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "getDateTime",
+          "arguments": {"city": "London"}
+        },
+        "id": 3
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "<matches_pattern: Time in London: .+ \\(Europe/London, UTC[+-]\\d{2}:\\d{2}\\)>"
+            }
+          ]
+        },
+        "id": 3
+      }
+    }
+  ]
+}

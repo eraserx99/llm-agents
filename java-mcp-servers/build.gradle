@@ -1,0 +1,157 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'checkstyle'
+}
+
+group = 'com.llmagents'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // MCP Java SDK
+    implementation 'io.modelcontextprotocol.sdk:mcp:0.14.1'
+
+    // Jakarta Servlet API + Jetty
+    implementation 'jakarta.servlet:jakarta.servlet-api:5.0.0'
+    implementation 'org.eclipse.jetty:jetty-server:11.0.24'
+    implementation 'org.eclipse.jetty:jetty-servlet:11.0.24'
+
+    // TLS/Certificate handling
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.79'
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.79'
+
+    // JSON processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
+    // CLI argument parsing
+    implementation 'info.picocli:picocli:4.7.6'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'ch.qos.logback:logback-classic:1.5.12'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.assertj:assertj-core:3.27.3'
+    testImplementation 'org.wiremock:wiremock:3.10.0'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+// Application plugin configuration for running servers
+application {
+    mainClass = 'com.llmagents.mcp.weather.WeatherServer'
+}
+
+// Custom tasks for running each server
+task runWeatherServer(type: JavaExec) {
+    group = 'application'
+    description = 'Run Weather MCP Server'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.llmagents.mcp.weather.WeatherServer'
+    // Arguments passed via --args='...'
+    if (project.hasProperty('args')) {
+        args(project.property('args').split())
+    }
+}
+
+task runDateTimeServer(type: JavaExec) {
+    group = 'application'
+    description = 'Run DateTime MCP Server'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.llmagents.mcp.datetime.DateTimeServer'
+    if (project.hasProperty('args')) {
+        args(project.property('args').split())
+    }
+}
+
+task runEchoServer(type: JavaExec) {
+    group = 'application'
+    description = 'Run Echo MCP Server'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.llmagents.mcp.echo.EchoServer'
+    if (project.hasProperty('args')) {
+        args(project.property('args').split())
+    }
+}
+
+// JAR configurations for standalone executables
+tasks.register('weatherJar', Jar) {
+    group = 'build'
+    description = 'Build Weather MCP Server JAR'
+    archiveBaseName = 'weather-mcp-server'
+    manifest {
+        attributes 'Main-Class': 'com.llmagents.mcp.weather.WeatherServer'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Exclude signature files to prevent SecurityException
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+tasks.register('datetimeJar', Jar) {
+    group = 'build'
+    description = 'Build DateTime MCP Server JAR'
+    archiveBaseName = 'datetime-mcp-server'
+    manifest {
+        attributes 'Main-Class': 'com.llmagents.mcp.datetime.DateTimeServer'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Exclude signature files to prevent SecurityException
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+tasks.register('echoJar', Jar) {
+    group = 'build'
+    description = 'Build Echo MCP Server JAR'
+    archiveBaseName = 'echo-mcp-server'
+    manifest {
+        attributes 'Main-Class': 'com.llmagents.mcp.echo.EchoServer'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Exclude signature files to prevent SecurityException
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+task buildAllJars {
+    group = 'build'
+    description = 'Build all MCP server JARs'
+    dependsOn weatherJar, datetimeJar, echoJar
+}
+
+// Checkstyle configuration
+checkstyle {
+    toolVersion = '10.20.2'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+    ignoreFailures = true  // Don't fail build on warnings
+    maxWarnings = 100      // Allow warnings for now
+}

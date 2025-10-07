@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -76,13 +77,23 @@ func main() {
 
 		utils.Info("Returning echo data: %+v", result)
 
-		return &mcp.CallToolResult{
+		callToolResult := &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{
 					Text: fmt.Sprintf("Echo: %s", result.EchoText),
 				},
 			},
-		}, result, nil
+		}
+
+		// Log the complete response structure for debugging
+		if resultJSON, err := json.MarshalIndent(map[string]interface{}{
+			"callToolResult": callToolResult,
+			"structuredData": result,
+		}, "", "  "); err == nil {
+			utils.Debug("Complete tool response payload:\n%s", string(resultJSON))
+		}
+
+		return callToolResult, result, nil
 	})
 
 	// Create StreamableHTTPHandler using official SDK

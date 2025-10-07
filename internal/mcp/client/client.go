@@ -173,6 +173,13 @@ func (c *Client) CallWeather(ctx context.Context, city string) (*models.Temperat
 		return nil, fmt.Errorf("getTemperature call failed: %w", err)
 	}
 
+	// Log the complete result structure for debugging
+	if resultJSON, err := json.MarshalIndent(result, "", "  "); err == nil {
+		utils.Debug("Complete CallTool result from MCP server:\n%s", string(resultJSON))
+	}
+	utils.Debug("result.StructuredContent type: %T, value: %+v", result.StructuredContent, result.StructuredContent)
+	utils.Debug("result.Content length: %d", len(result.Content))
+
 	// Extract result from StructuredContent
 	var weatherData struct {
 		Temperature float64 `json:"temperature"`

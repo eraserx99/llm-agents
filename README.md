@@ -199,6 +199,79 @@ go build -o bin/cert-gen ./cmd/cert-gen          # Certificate generator (for TL
 export OPENROUTER_API_KEY="your-api-key-here"
 ```
 
+## 🔄 Go vs Java MCP Servers
+
+This project provides **two implementations** of MCP servers that are **100% protocol-compatible**:
+- **Go servers** (default): High-performance, compiled binaries using official MCP Go SDK
+- **Java servers**: JVM-based, enterprise-ready using official MCP Java SDK
+
+Both implementations use the same ports, endpoints, and data formats. The coordinator agent works with either implementation without any code changes.
+
+### Quick Comparison
+
+| Feature | Go Servers | Java Servers |
+|---------|-----------|--------------|
+| **Build Time** | <5 seconds | ~10 seconds |
+| **Binary Size** | ~15MB each | ~19MB JAR each |
+| **Memory Usage** | ~10-20MB | ~64-128MB |
+| **Startup Time** | <100ms | ~2-3 seconds |
+| **Protocol** | MCP Streaming (JSON-RPC 2.0) | MCP Streaming (JSON-RPC 2.0) |
+| **Ports** | 8081-8083 (HTTP)<br>8443-8445 (HTTPS) | 8081-8083 (HTTP)<br>8443-8445 (HTTPS) |
+
+### Using Go Servers (Default)
+
+```bash
+# Build Go servers
+make build
+
+# Start Go MCP servers
+make run-servers              # HTTP mode
+make run-servers-tls          # HTTPS mode with mTLS
+
+# Run queries
+./bin/llm-agents -city "Tokyo" -query "What's the temperature?"
+
+# Stop servers
+make stop-servers
+```
+
+### Using Java Servers
+
+**Requirements**: Java 21+
+
+```bash
+# Build Java servers
+make build-java
+
+# Start Java MCP servers
+make run-java-servers         # HTTP mode
+make run-java-servers-tls     # HTTPS mode with mTLS
+
+# Run queries (same command!)
+./bin/llm-agents -city "Tokyo" -query "What's the temperature?"
+
+# Stop servers
+make stop-java-servers
+```
+
+### Switching Between Implementations
+
+**Switch from Go to Java:**
+```bash
+make stop-servers           # Stop Go servers
+make run-java-servers       # Start Java servers
+# No other changes needed - coordinator works seamlessly!
+```
+
+**Switch from Java to Go:**
+```bash
+make stop-java-servers      # Stop Java servers
+make run-servers            # Start Go servers
+# No other changes needed!
+```
+
+For detailed Java implementation documentation, see [java-mcp-servers/README.md](java-mcp-servers/README.md).
+
 ### Running the System
 
 #### Primary System: Official MCP SDK with Streaming Protocol
