@@ -1,0 +1,234 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Echo MCP Server API Contract",
+  "description": "API contract for Echo MCP server - must match Go implementation exactly",
+  "version": "1.0.0",
+  "server": "echo-mcp",
+
+  "transport": {
+    "protocol": "MCP Streaming Protocol (JSON-RPC 2.0 over HTTP/SSE)",
+    "endpoint": "/mcp",
+    "httpPort": 8083,
+    "httpsPort": 8445
+  },
+
+  "tool": {
+    "name": "echo",
+    "description": "Echo back the provided text",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "the text to echo back"
+        }
+      },
+      "required": ["text"]
+    }
+  },
+
+  "request": {
+    "type": "object",
+    "required": ["jsonrpc", "method", "params", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "method": {
+        "type": "string",
+        "const": "tools/call"
+      },
+      "params": {
+        "type": "object",
+        "required": ["name", "arguments"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "echo"
+          },
+          "arguments": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "method": "tools/call",
+      "params": {
+        "name": "echo",
+        "arguments": {
+          "text": "hello world"
+        }
+      },
+      "id": 1
+    }
+  },
+
+  "response": {
+    "type": "object",
+    "required": ["jsonrpc", "result", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "result": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "text"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "text"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^Echo: .+$",
+                  "description": "Format: 'Echo: {text}'"
+                }
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Echo: hello world"
+          }
+        ]
+      },
+      "id": 1
+    }
+  },
+
+  "echoDataFormat": {
+    "description": "Internal echo data structure (not exposed in MCP response, but logged)",
+    "type": "object",
+    "required": ["original_text", "echo_text", "timestamp"],
+    "properties": {
+      "original_text": {
+        "type": "string",
+        "description": "Input text"
+      },
+      "echo_text": {
+        "type": "string",
+        "description": "Same as original_text"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 format (RFC3339)"
+      }
+    },
+    "example": {
+      "original_text": "hello world",
+      "echo_text": "hello world",
+      "timestamp": "2024-09-23T14:30:45Z"
+    }
+  },
+
+  "compatibilityTests": [
+    {
+      "name": "Basic echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "echo",
+          "arguments": {"text": "hello world"}
+        },
+        "id": 1
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Echo: hello world"
+            }
+          ]
+        },
+        "id": 1
+      }
+    },
+    {
+      "name": "Empty string echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "echo",
+          "arguments": {"text": ""}
+        },
+        "id": 2
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Echo: "
+            }
+          ]
+        },
+        "id": 2
+      }
+    },
+    {
+      "name": "Special characters echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "echo",
+          "arguments": {"text": "Hello, World! 🌍 @#$%^&*()"}
+        },
+        "id": 3
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Echo: Hello, World! 🌍 @#$%^&*()"
+            }
+          ]
+        },
+        "id": 3
+      }
+    }
+  ]
+}

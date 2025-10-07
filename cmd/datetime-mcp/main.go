@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -27,6 +28,23 @@ type DateTimeResult struct {
 	UTCOffset   string `json:"utc_offset"`
 	City        string `json:"city"`
 	Timestamp   string `json:"timestamp"`
+}
+
+// responseCapture wraps http.ResponseWriter to capture response data
+type responseCapture struct {
+	http.ResponseWriter
+	statusCode int
+	body       []byte
+}
+
+func (rc *responseCapture) WriteHeader(statusCode int) {
+	rc.statusCode = statusCode
+	rc.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (rc *responseCapture) Write(b []byte) (int, error) {
+	rc.body = append(rc.body, b...)
+	return rc.ResponseWriter.Write(b)
 }
 
 func main() {
@@ -119,14 +137,24 @@ func main() {
 
 		utils.Info("Returning datetime data: %+v", result)
 
-		return &mcp.CallToolResult{
+		callToolResult := &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{
 					Text: fmt.Sprintf("Time in %s: %s (%s, UTC%s)",
 						result.City, result.LocalTime, result.Timezone, result.UTCOffset),
 				},
 			},
-		}, result, nil
+		}
+
+		// Log the complete response structure for debugging
+		if resultJSON, err := json.MarshalIndent(map[string]interface{}{
+			"callToolResult": callToolResult,
+			"structuredData": result,
+		}, "", "  "); err == nil {
+			utils.Debug("Complete tool response payload:\n%s", string(resultJSON))
+		}
+
+		return callToolResult, result, nil
 	})
 
 	// Create StreamableHTTPHandler using official SDK
@@ -134,9 +162,25 @@ func main() {
 		return server
 	}, &mcp.StreamableHTTPOptions{JSONResponse: true})
 
+	// Wrap handler to log responses
+	loggingHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Create a response writer wrapper to capture the response
+		responseWriter := &responseCapture{
+			ResponseWriter: w,
+			statusCode:     200,
+			body:           []byte{},
+		}
+
+		handler.ServeHTTP(responseWriter, r)
+
+		// Log the complete HTTP response for debugging
+		utils.Debug("HTTP Response Status: %d", responseWriter.statusCode)
+		utils.Debug("HTTP Response Body:\n%s", string(responseWriter.body))
+	})
+
 	// Setup HTTP routes
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", handler)
+	mux.Handle("/mcp", loggingHandler)
 
 	var tlsConfig *config.TLSConfig
 

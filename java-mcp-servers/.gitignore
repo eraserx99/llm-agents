@@ -1,0 +1,18 @@
+
+# Java
+*.class
+*.jar
+!gradle-wrapper.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+.gradle/
+build/
+*-java.log
+*-java-tls.log
+
+# IDE
+.vscode/
+.idea/
+*.iml

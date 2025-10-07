@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Streaming Protocol Specification",
+  "description": "JSON-RPC 2.0 protocol over HTTP/SSE for Model Context Protocol servers",
+  "version": "1.0.0",
+  "baseProtocol": "JSON-RPC 2.0",
+  "transport": "HTTP + Server-Sent Events (SSE)",
+
+  "endpoint": {
+    "path": "/mcp",
+    "description": "Single endpoint for all MCP communication",
+    "methods": ["POST"],
+    "contentType": "application/json"
+  },
+
+  "sseResponse": {
+    "contentType": "text/event-stream",
+    "headers": {
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
+    },
+    "eventFormat": "data: {json-rpc-message}\\n\\n"
+  },
+
+  "requestFormat": {
+    "type": "object",
+    "required": ["jsonrpc", "method", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0",
+        "description": "JSON-RPC version"
+      },
+      "method": {
+        "type": "string",
+        "enum": ["tools/list", "tools/call", "resources/list", "resources/read"],
+        "description": "MCP method name"
+      },
+      "params": {
+        "type": "object",
+        "description": "Method-specific parameters"
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"},
+          {"type": "null"}
+        ],
+        "description": "Request identifier"
+      }
+    }
+  },
+
+  "responseFormat": {
+    "type": "object",
+    "required": ["jsonrpc", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "result": {
+        "type": "object",
+        "description": "Success result (mutually exclusive with error)"
+      },
+      "error": {
+        "type": "object",
+        "description": "Error object (mutually exclusive with result)",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "JSON-RPC error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "data": {
+            "description": "Optional additional error information"
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"},
+          {"type": "null"}
+        ]
+      }
+    }
+  },
+
+  "standardErrorCodes": {
+    "PARSE_ERROR": {
+      "code": -32700,
+      "message": "Parse error",
+      "description": "Invalid JSON was received"
+    },
+    "INVALID_REQUEST": {
+      "code": -32600,
+      "message": "Invalid Request",
+      "description": "The JSON is not a valid request object"
+    },
+    "METHOD_NOT_FOUND": {
+      "code": -32601,
+      "message": "Method not found",
+      "description": "The method does not exist or is not available"
+    },
+    "INVALID_PARAMS": {
+      "code": -32602,
+      "message": "Invalid params",
+      "description": "Invalid method parameters"
+    },
+    "INTERNAL_ERROR": {
+      "code": -32603,
+      "message": "Internal error",
+      "description": "Internal JSON-RPC error"
+    }
+  },
+
+  "examples": {
+    "toolsListRequest": {
+      "jsonrpc": "2.0",
+      "method": "tools/list",
+      "params": {},
+      "id": 1
+    },
+    "toolsListResponse": {
+      "jsonrpc": "2.0",
+      "result": {
+        "tools": [
+          {
+            "name": "getTemperature",
+            "description": "Get current temperature and weather conditions for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "description": "the city to get weather for"
+                }
+              },
+              "required": ["city"]
+            }
+          }
+        ]
+      },
+      "id": 1
+    },
+    "toolsCallRequest": {
+      "jsonrpc": "2.0",
+      "method": "tools/call",
+      "params": {
+        "name": "getTemperature",
+        "arguments": {
+          "city": "Tokyo"
+        }
+      },
+      "id": 2
+    },
+    "toolsCallResponse": {
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Weather in Tokyo: 37.3°C, Light rain"
+          }
+        ]
+      },
+      "id": 2
+    },
+    "errorResponse": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32601,
+        "message": "Method not found: unknownMethod"
+      },
+      "id": 3
+    }
+  }
+}

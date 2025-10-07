@@ -117,6 +117,75 @@
                 "OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
             },
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Java Weather MCP Server",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.weather.WeatherServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "env": {}
+        },
+        {
+            "name": "Java Weather MCP Server (TLS)",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.weather.WeatherServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "args": "--tls",
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
+        },
+        {
+            "name": "Java DateTime MCP Server",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.datetime.DateTimeServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "env": {}
+        },
+        {
+            "name": "Java DateTime MCP Server (TLS)",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.datetime.DateTimeServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "args": "--tls",
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
+        },
+        {
+            "name": "Java Echo MCP Server",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.echo.EchoServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "env": {}
+        },
+        {
+            "name": "Java Echo MCP Server (TLS)",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "com.llmagents.mcp.echo.EchoServer",
+            "projectName": "java-mcp-servers",
+            "cwd": "${workspaceFolder}",
+            "args": "--tls",
+            "env": {
+                "TLS_ENABLED": "true",
+                "TLS_DEMO_MODE": "true",
+                "TLS_CERT_DIR": "./certs"
+            }
         }
     ],
     "compounds": [
@@ -135,6 +204,24 @@
                 "Launch Weather MCP Server (TLS)",
                 "Launch DateTime MCP Server (TLS)",
                 "Launch Echo MCP Server (TLS)"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "All Java MCP Servers (HTTP)",
+            "configurations": [
+                "Java Weather MCP Server",
+                "Java DateTime MCP Server",
+                "Java Echo MCP Server"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "All Java MCP Servers (TLS)",
+            "configurations": [
+                "Java Weather MCP Server (TLS)",
+                "Java DateTime MCP Server (TLS)",
+                "Java Echo MCP Server (TLS)"
             ],
             "stopAll": true
         }

@@ -1,0 +1,221 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Weather MCP Server API Contract",
+  "description": "API contract for Weather MCP server - must match Go implementation exactly",
+  "version": "1.0.0",
+  "server": "weather-mcp",
+
+  "transport": {
+    "protocol": "MCP Streaming Protocol (JSON-RPC 2.0 over HTTP/SSE)",
+    "endpoint": "/mcp",
+    "httpPort": 8081,
+    "httpsPort": 8443
+  },
+
+  "tool": {
+    "name": "getTemperature",
+    "description": "Get current temperature and weather conditions for a city",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string",
+          "description": "the city to get weather for"
+        }
+      },
+      "required": ["city"]
+    }
+  },
+
+  "request": {
+    "type": "object",
+    "required": ["jsonrpc", "method", "params", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "method": {
+        "type": "string",
+        "const": "tools/call"
+      },
+      "params": {
+        "type": "object",
+        "required": ["name", "arguments"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "getTemperature"
+          },
+          "arguments": {
+            "type": "object",
+            "required": ["city"],
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "method": "tools/call",
+      "params": {
+        "name": "getTemperature",
+        "arguments": {
+          "city": "New York"
+        }
+      },
+      "id": 1
+    }
+  },
+
+  "response": {
+    "type": "object",
+    "required": ["jsonrpc", "result", "id"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "result": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "text"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "text"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^Weather in .+: [0-9.]+°C, .+$",
+                  "description": "Format: 'Weather in {city}: {temp}°C, {description}'"
+                }
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "example": {
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Weather in New York: 28.5°C, Partly cloudy"
+          }
+        ]
+      },
+      "id": 1
+    }
+  },
+
+  "weatherDataFormat": {
+    "description": "Internal weather data structure (not exposed in MCP response, but logged)",
+    "type": "object",
+    "required": ["temperature", "unit", "description", "city", "timestamp"],
+    "properties": {
+      "temperature": {
+        "type": "number",
+        "minimum": 20.0,
+        "maximum": 45.0,
+        "description": "Temperature in Celsius (simulated range)"
+      },
+      "unit": {
+        "type": "string",
+        "const": "°C"
+      },
+      "description": {
+        "type": "string",
+        "enum": ["Sunny", "Partly cloudy", "Cloudy", "Light rain", "Clear"]
+      },
+      "city": {
+        "type": "string"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 format (RFC3339)"
+      }
+    },
+    "example": {
+      "temperature": 28.5,
+      "unit": "°C",
+      "description": "Partly cloudy",
+      "city": "New York",
+      "timestamp": "2024-09-23T14:30:45Z"
+    }
+  },
+
+  "compatibilityTests": [
+    {
+      "name": "Basic weather query",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "getTemperature",
+          "arguments": {"city": "Tokyo"}
+        },
+        "id": 1
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "<matches_pattern: Weather in Tokyo: \\d+\\.\\d+°C, (Sunny|Partly cloudy|Cloudy|Light rain|Clear)>"
+            }
+          ]
+        },
+        "id": 1
+      }
+    },
+    {
+      "name": "City with spaces",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "getTemperature",
+          "arguments": {"city": "New York"}
+        },
+        "id": 2
+      },
+      "expectedResponse": {
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "<matches_pattern: Weather in New York: \\d+\\.\\d+°C, .+>"
+            }
+          ]
+        },
+        "id": 2
+      }
+    }
+  ]
+}

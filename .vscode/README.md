@@ -58,23 +58,40 @@ You have **3 options** for providing the `OPENROUTER_API_KEY`:
 
 ## Debug Configurations
 
-### Individual Components
+### Coordinator Agent
 
 - **Launch Main (Coordinator Agent)** - Run the coordinator with a temperature query
 - **Launch Main (Combined Query)** - Run with both weather and time query
 - **Launch Main (Echo Query)** - Run with echo query
+
+### Go MCP Servers
+
 - **Launch Weather MCP Server** - HTTP mode
 - **Launch Weather MCP Server (TLS)** - HTTPS mode with mTLS
 - **Launch DateTime MCP Server** - HTTP mode
 - **Launch DateTime MCP Server (TLS)** - HTTPS mode with mTLS
 - **Launch Echo MCP Server** - HTTP mode
 - **Launch Echo MCP Server (TLS)** - HTTPS mode with mTLS
+
+### Java MCP Servers
+
+- **Java Weather MCP Server** - HTTP mode
+- **Java Weather MCP Server (TLS)** - HTTPS mode with mTLS
+- **Java DateTime MCP Server** - HTTP mode
+- **Java DateTime MCP Server (TLS)** - HTTPS mode with mTLS
+- **Java Echo MCP Server** - HTTP mode
+- **Java Echo MCP Server (TLS)** - HTTPS mode with mTLS
+
+### Utilities
+
 - **Launch Certificate Generator** - Generate TLS certificates
 
 ### Compound Configurations
 
-- **All MCP Servers (HTTP)** - Launch all three servers in HTTP mode simultaneously
-- **All MCP Servers (TLS)** - Launch all three servers in TLS mode simultaneously
+- **All MCP Servers (HTTP)** - Launch all three Go servers in HTTP mode simultaneously
+- **All MCP Servers (TLS)** - Launch all three Go servers in TLS mode simultaneously
+- **All Java MCP Servers (HTTP)** - Launch all three Java servers in HTTP mode simultaneously
+- **All Java MCP Servers (TLS)** - Launch all three Java servers in TLS mode simultaneously
 
 ## How to Debug
 
@@ -84,7 +101,7 @@ You have **3 options** for providing the `OPENROUTER_API_KEY`:
 
 2. **Start all MCP servers**:
    - Open Run & Debug panel (`Cmd+Shift+D` on Mac, `Ctrl+Shift+D` on Windows/Linux)
-   - Select "All MCP Servers (HTTP)" from dropdown
+   - Select **"All MCP Servers (HTTP)"** for Go servers, or **"All Java MCP Servers (HTTP)"** for Java servers
    - Press `F5` or click green play button
    - Wait for all servers to start
 
@@ -93,6 +110,19 @@ You have **3 options** for providing the `OPENROUTER_API_KEY`:
    - Select "Launch Main (Coordinator Agent)"
    - Press `F5`
    - Set breakpoints as needed
+
+### Debugging Java Servers
+
+**Prerequisites**:
+- Java 21+ installed
+- Java servers built: `make build-java` (from project root)
+- [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) installed in VS Code
+
+**To debug Java servers**:
+1. Select any Java server configuration (e.g., "Java Weather MCP Server")
+2. Press `F5` to launch with debugging
+3. Set breakpoints in Java source files (`.java` files in `java-mcp-servers/src/`)
+4. Java servers are fully protocol-compatible with Go servers
 
 ### Tips
 
