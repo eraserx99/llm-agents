@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/steve/llm-agents/internal/agents/client"
+	"github.com/steve/llm-agents/internal/mcp/client"
 	"github.com/steve/llm-agents/internal/config"
 	"github.com/steve/llm-agents/internal/models"
 	"github.com/steve/llm-agents/internal/utils"
@@ -14,12 +14,12 @@ import (
 
 // Agent implements the datetime sub-agent
 type Agent struct {
-	mcpClient *client.MCPClient
+	mcpClient *client.Client
 }
 
 // NewAgent creates a new datetime agent
 func NewAgent(datetimeServerURL string, timeout time.Duration) *Agent {
-	mcpClient, err := client.NewMCPClient(datetimeServerURL, timeout)
+	mcpClient, err := client.NewClient(datetimeServerURL, timeout)
 	if err != nil {
 		utils.Error("Failed to create MCP client: %v", err)
 		return nil
@@ -31,7 +31,7 @@ func NewAgent(datetimeServerURL string, timeout time.Duration) *Agent {
 
 // NewTLSAgent creates a new datetime agent with TLS support
 func NewTLSAgent(datetimeServerURL string, timeout time.Duration, tlsConfig *config.TLSConfig) *Agent {
-	mcpClient, err := client.NewTLSMCPClient(datetimeServerURL, timeout, tlsConfig)
+	mcpClient, err := client.NewTLSClient(datetimeServerURL, timeout, tlsConfig)
 	if err != nil {
 		utils.Error("Failed to create TLS MCP client: %v", err)
 		// Fall back to regular client

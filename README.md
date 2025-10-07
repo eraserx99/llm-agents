@@ -279,12 +279,17 @@ export TLS_ENABLED=true
 export TLS_DEMO_MODE=true
 export TLS_CERT_DIR=./certs
 
-# Start MCP servers with TLS (in separate terminals)
-./bin/weather-mcp --tls    # HTTP: 8080, HTTPS: 8443
-./bin/datetime-mcp --tls   # HTTP: 8081, HTTPS: 8444
-./bin/echo-mcp --tls       # HTTP: 8082, HTTPS: 8445
+# Configure MCP server URLs for TLS ports (include /mcp endpoint)
+export MCP_WEATHER_URL=https://localhost:8443/mcp
+export MCP_DATETIME_URL=https://localhost:8444/mcp
+export MCP_ECHO_URL=https://localhost:8445/mcp
 
-# Run queries (coordinator auto-detects TLS mode)
+# Start MCP servers with TLS (in separate terminals)
+./bin/weather-mcp --tls    # HTTP: 8081, HTTPS: 8443
+./bin/datetime-mcp --tls   # HTTP: 8082, HTTPS: 8444
+./bin/echo-mcp --tls       # HTTP: 8083, HTTPS: 8445
+
+# Run queries
 ./bin/llm-agents -city "New York" -query "What's the temperature?"
 ```
 
@@ -349,7 +354,14 @@ ECHO_MCP_TLS_PORT=8445     # HTTPS port for echo server
 **HTTPS Mode (mTLS)**:
 ```bash
 # Set TLS environment
-export TLS_ENABLED=true TLS_DEMO_MODE=true TLS_CERT_DIR=./certs
+export TLS_ENABLED=true
+export TLS_DEMO_MODE=true
+export TLS_CERT_DIR=./certs
+
+# Configure MCP server URLs for TLS ports (include /mcp endpoint)
+export MCP_WEATHER_URL=https://localhost:8443/mcp
+export MCP_DATETIME_URL=https://localhost:8444/mcp
+export MCP_ECHO_URL=https://localhost:8445/mcp
 
 # Option 1: Use Makefile target (recommended)
 make run-servers-tls  # Starts all servers with TLS enabled
@@ -359,7 +371,7 @@ make run-servers-tls  # Starts all servers with TLS enabled
 ./bin/datetime-mcp --tls   # HTTP: 8082, HTTPS: 8444
 ./bin/echo-mcp --tls       # HTTP: 8083, HTTPS: 8445
 
-# Coordinator auto-detects and uses HTTPS clients with mTLS
+# Coordinator uses HTTPS clients with mTLS
 ./bin/llm-agents -city "Boston" -query "temperature"
 ```
 
@@ -374,7 +386,7 @@ openssl verify -CAfile certs/ca.crt certs/client.crt
 # Test HTTPS endpoints directly
 curl -k --cert certs/client.crt --key certs/client.key \
      --cacert certs/ca.crt \
-     https://localhost:8443/rpc
+     https://localhost:8443/mcp
 
 # Or use the built-in test
 go run test-mtls.go
@@ -445,9 +457,14 @@ Claude 3.5 Sonnet makes smart decisions about:
 OPENROUTER_API_KEY="your-api-key"
 
 # Optional MCP Server URLs (defaults shown)
-MCP_WEATHER_URL="http://localhost:8081"    # HTTP mode
-MCP_DATETIME_URL="http://localhost:8082"   # HTTP mode
-MCP_ECHO_URL="http://localhost:8083"       # HTTP mode
+MCP_WEATHER_URL="http://localhost:8081"    # HTTP mode (default)
+MCP_DATETIME_URL="http://localhost:8082"   # HTTP mode (default)
+MCP_ECHO_URL="http://localhost:8083"       # HTTP mode (default)
+
+# For TLS mode, set these to HTTPS URLs (include /mcp endpoint):
+# MCP_WEATHER_URL="https://localhost:8443/mcp"
+# MCP_DATETIME_URL="https://localhost:8444/mcp"
+# MCP_ECHO_URL="https://localhost:8445/mcp"
 
 # TLS/mTLS Configuration (Optional)
 TLS_ENABLED="false"           # Enable TLS mode (true/false)

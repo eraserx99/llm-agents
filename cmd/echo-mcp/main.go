@@ -22,8 +22,9 @@ type EchoArgs struct {
 }
 
 type EchoResult struct {
-	EchoedText string `json:"echoed_text"`
-	Timestamp  string `json:"timestamp"`
+	OriginalText string `json:"original_text"`
+	EchoText     string `json:"echo_text"`
+	Timestamp    string `json:"timestamp"`
 }
 
 func main() {
@@ -68,8 +69,9 @@ func main() {
 		utils.Info("Handling echo request for text: %s", args.Text)
 
 		result := EchoResult{
-			EchoedText: args.Text,
-			Timestamp:  time.Now().Format(time.RFC3339),
+			OriginalText: args.Text,
+			EchoText:     args.Text,
+			Timestamp:    time.Now().Format(time.RFC3339),
 		}
 
 		utils.Info("Returning echo data: %+v", result)
@@ -77,7 +79,7 @@ func main() {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{
-					Text: fmt.Sprintf("Echo: %s", result.EchoedText),
+					Text: fmt.Sprintf("Echo: %s", result.EchoText),
 				},
 			},
 		}, result, nil

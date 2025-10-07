@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/steve/llm-agents/internal/agents/client"
+	"github.com/steve/llm-agents/internal/mcp/client"
 	"github.com/steve/llm-agents/internal/config"
 	"github.com/steve/llm-agents/internal/models"
 	"github.com/steve/llm-agents/internal/utils"
@@ -14,12 +14,12 @@ import (
 
 // Agent implements the echo sub-agent
 type Agent struct {
-	mcpClient *client.MCPClient
+	mcpClient *client.Client
 }
 
 // NewAgent creates a new echo agent
 func NewAgent(echoServerURL string, timeout time.Duration) *Agent {
-	mcpClient, err := client.NewMCPClient(echoServerURL, timeout)
+	mcpClient, err := client.NewClient(echoServerURL, timeout)
 	if err != nil {
 		utils.Error("Failed to create MCP client: %v", err)
 		return nil
@@ -31,7 +31,7 @@ func NewAgent(echoServerURL string, timeout time.Duration) *Agent {
 
 // NewTLSAgent creates a new echo agent with TLS support
 func NewTLSAgent(echoServerURL string, timeout time.Duration, tlsConfig *config.TLSConfig) *Agent {
-	mcpClient, err := client.NewTLSMCPClient(echoServerURL, timeout, tlsConfig)
+	mcpClient, err := client.NewTLSClient(echoServerURL, timeout, tlsConfig)
 	if err != nil {
 		utils.Error("Failed to create TLS MCP client: %v", err)
 		// Fall back to regular client

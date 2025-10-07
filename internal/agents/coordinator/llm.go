@@ -101,6 +101,7 @@ City: "%s"
 
 IMPORTANT RULES:
 - Only invoke Echo Agent when the user explicitly asks to echo text (e.g., "echo hello world", "repeat this text")
+- For Echo Agent requests, extract the text to echo from the query (e.g., for "echo hello world", use "hello world" as the text parameter)
 - For weather/temperature and datetime queries, do NOT invoke the Echo Agent
 - Use parallel execution when multiple data types are requested (e.g., both weather and time)
 - Use sequential execution when one result depends on another or for single requests
@@ -188,15 +189,23 @@ func (c *LLMClient) callClaude(ctx context.Context, prompt string) (string, erro
 // parseOrchestrationResponse parses Claude's response into an OrchestrationPlan
 func (c *LLMClient) parseOrchestrationResponse(response string, query models.Query) (*models.OrchestrationPlan, error) {
 	// Try to extract JSON from the response (Claude might include explanation text)
+	// Find the JSON object by matching braces
 	jsonStart := -1
+	braceCount := 0
 	jsonEnd := -1
 
 	for i, r := range response {
-		if r == '{' && jsonStart == -1 {
-			jsonStart = i
-		}
-		if r == '}' {
-			jsonEnd = i + 1
+		if r == '{' {
+			if jsonStart == -1 {
+				jsonStart = i
+			}
+			braceCount++
+		} else if r == '}' {
+			braceCount--
+			if braceCount == 0 && jsonStart != -1 {
+				jsonEnd = i + 1
+				break
+			}
 		}
 	}
 
@@ -205,7 +214,8 @@ func (c *LLMClient) parseOrchestrationResponse(response string, query models.Que
 	}
 
 	jsonStr := response[jsonStart:jsonEnd]
-	utils.Debug("Extracted JSON: %s", jsonStr)
+	utils.Info("Full LLM Response: %s", response)
+	utils.Info("Extracted JSON: %s", jsonStr)
 
 	// Parse the JSON response
 	var planData struct {
@@ -219,6 +229,7 @@ func (c *LLMClient) parseOrchestrationResponse(response string, query models.Que
 		Reasoning string `json:"reasoning"`
 	}
 
+	utils.Info("Parsing JSON into planData structure...")
 	if err := json.Unmarshal([]byte(jsonStr), &planData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal orchestration plan: %w", err)
 	}
@@ -257,6 +268,11 @@ func (c *LLMClient) parseOrchestrationResponse(response string, query models.Que
 		case "echo":
 			task.AgentType = models.AgentTypeEcho
 			task.EchoText = taskData.Parameters["text"]
+			utils.Info("Echo task created with text: '%s'", task.EchoText)
+			// Validate that echo text is provided
+			if task.EchoText == "" {
+				return nil, fmt.Errorf("echo agent requires non-empty 'text' parameter")
+			}
 		default:
 			return nil, fmt.Errorf("invalid agent type: %s", taskData.AgentType)
 		}
